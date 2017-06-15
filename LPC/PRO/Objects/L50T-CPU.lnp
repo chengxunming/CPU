@@ -1,0 +1,16 @@
+--cpu Cortex-M3
+".\objects\main.o"
+".\objects\sys.o"
+".\objects\delay.o"
+".\objects\bsp_net.o"
+".\objects\w5500.o"
+".\objects\socket.o"
+".\objects\wizchip_conf.o"
+".\objects\ssp.o"
+".\objects\core_cm3.o"
+".\objects\system_lpc177x_8x.o"
+".\objects\startup_lpc177x_8x.o"
+--strict --scatter ".\Objects\L50T-CPU.sct"
+--summary_stderr --info summarysizes --map --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\Listings\L50T-CPU.map" -o .\Objects\L50T-CPU.axf
