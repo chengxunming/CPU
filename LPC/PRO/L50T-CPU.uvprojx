@@ -400,9 +400,19 @@
           <GroupName>BSP</GroupName>
           <Files>
             <File>
+              <FileName>bsp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\bsp.c</FilePath>
+            </File>
+            <File>
               <FileName>bsp_net.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\BSP\bsp_net.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_pcf8563.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\bsp_pcf8563.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -433,6 +443,21 @@
               <FileName>ssp.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Driver\ssp.c</FilePath>
+            </File>
+            <File>
+              <FileName>I2CINT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\I2CINT.c</FilePath>
+            </File>
+            <File>
+              <FileName>time.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\time.c</FilePath>
+            </File>
+            <File>
+              <FileName>LPC1700CAN.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\LPC1700CAN.c</FilePath>
             </File>
           </Files>
         </Group>

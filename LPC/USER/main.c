@@ -20,6 +20,8 @@ int main (void)
 	LPC_GPIO2->DIR = 0x0000;
 	LPC_GPIO3->DIR = 0x0000;
 	LPC_GPIO4->DIR = 0x0000;
+	
+	PCF8563_INT_GPIO_Init();
 
 	while (1) 
 	{

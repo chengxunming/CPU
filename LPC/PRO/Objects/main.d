@@ -12,7 +12,9 @@
 .\objects\main.o: ..\CMSIS\CM3\DeviceSupport\NXP\LPC17xx\system_LPC177x_8x.h
 .\objects\main.o: ..\USER\sys.h
 .\objects\main.o: ..\USER\delay.h
-.\objects\main.o: ..\BSP\bsp.h
-.\objects\main.o: ..\USER\bsp_include.h
+.\objects\main.o: ..\Driver\time.h
+.\objects\main.o: ..\Driver\LPC1700CAN.h
+.\objects\main.o: ..\USER\type.h
 .\objects\main.o: ..\BSP\bsp_net.h
 .\objects\main.o: ..\Driver\ssp.h
+.\objects\main.o: ..\BSP\bsp_pcf8563.h

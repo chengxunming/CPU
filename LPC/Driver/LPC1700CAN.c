@@ -22,29 +22,17 @@
 ** Descriptions:                    
 **
 *********************************************************************************************************/
-//#include "LPC1700CAN.h" 
+#include "LPC1700CAN.h" 
+#include "bsp.h" 
 //#include <string.h> 
-#include "../User_code/global.h"
+#include "bsp_include.h"
 
 MessageDetail MessageDetailT;
 MessageDetail MessageCAN0;                                              /* ÒýÓÃCAN0Í¨µÀÖ¡±äÁ¿           */
 MessageDetail MessageCAN1;                                              /* ÒýÓÃCAN1Í¨µÀÖ¡±äÁ¿           */
+
 CAN_MSG_Type	sCANFRAME;
-
-ScanReceive		sStatus,sStatus_history;
-ScanSend		sCommand,s_command_history;							//ÀúÊ·Öµ
-extern Board_Online_Status Boardstatus;
-
-
-t_DTnS dtns[32];
-t_IOnS ions[32];
-t_dev_s all_dev[DEV_NUM];
-t_dataFrame send_dataFrame,rec_dataFrame;
-
-extern uint8_t PDUDRV[4];
-uint8_t AirswitchCnt;
-uint8_t GetSSUinitstatus=0;
-uint8_t LAMPOFF_OP_Flag,PDU_DATA_READY,GetMaustatus=0,RMCMTEMP[1]={0};
+static Frame_DefType receive_Frame,receive_Frame2;
 
 static Status CAN_SendMsg (uint8_t canId, CAN_MSG_Type *CAN_Msg);
 
@@ -245,7 +233,7 @@ unsigned char CANSend(unsigned char Ch, unsigned char BUFNum)
         CAN32reg = RGE(regaddr);
 				if(!(CAN32reg & (1 << 3))) 
 				{                          													 /* ????????????     */
-            myDelay(1);                                     /* ???????1ms           */
+            delay_ms(1);                                     /* ???????1ms           */
             CAN32reg=(1<<3);                               /* ????? ????          */			
 				}
     }
@@ -301,1057 +289,101 @@ unsigned char CANSend(unsigned char Ch, unsigned char BUFNum)
 
 
 
-int frame_organise(int funId, CAN_MSG_Type *Candata, uint8* pSendData, uint8 iDataLen)
+//·¢ËÍCANÊý¾ÝÖ¡--SSU·¢ËÍ--µ¥Ö¡
+Status Send_CAN_DataFrame(uint8_t ch,uint8_t addr,uint8_t *ptr,uint8_t len) //ptr: Êý¾ÝÖ¸Õë. len: Êý¾Ý³¤¶È 
 {
-	t_IDFrame *p_IDFrame;
-	uint8_t ch;
-	
-	if(funId<=38)
-	{
-		ch = 1;
-	}
-	else if((70<funId)&&(funId<301))
-	{
-		ch = 0;
-	}
-	else if((300<funId)&&(funId<370))
-	{
-		ch = 1;
-	}
-	else 
-	{
-		ch = 0;
-	}
-
-	if (!Candata)
-	{
-		return -1;
-	}
-	else
-	{
-		//memset(Candata, 0, sizeof(CANFRAME));
-		memset(Candata, 0, sizeof(CAN_MSG_Type));
-	}
-
-	//just for 5 bytes
-	if (iDataLen > 5)
-	{
-		return -1;
-	}
-	//Candata->can_dlc = iDataLen + 3;
-	Candata->len = iDataLen + 3;
-
-	//p_IDFrame = (t_IDFrame *) (&(Candata->can_id));
-	p_IDFrame = (t_IDFrame *) (&(Candata->id));
-
-	p_IDFrame->dataType = APP_DATA;
-	p_IDFrame->addrType = ID_REV;
-
-	send_dataFrame.ifExt = NO_EXT;
-	send_dataFrame.ifFirmware = FIRMWARE_NOT;
-	
-	//´óÐ¡¶Ë×ª»»
-	uint8_t temp1,temp2;
-	temp1 = funId;
-	temp2 = (funId&0xFF00)>>8;
-	
-	send_dataFrame.dataType = (temp1<<8)+temp2;
-
-	switch (funId)
-	{
-	case LMPC:
-	case DIMC:
-	case MFUC:
-		p_IDFrame->nodeId = SSU_ID;
-		break;
-	case PD1C:
-	case PD2C:
-	case PD3C:
-	case PD4C:
-	case PD5C:
-	case PD6C:
-	case PD7C:
-	case PD8C:
-		p_IDFrame->nodeId = (funId - PD1C) + PDU1_ID;
-		break;
-	case IO1C:
-	case IO2C:
-	case IO3C:
-	case IO4C:
-	case IO5C:
-		p_IDFrame->nodeId = (funId - IO1C) + DET_IOU01_ID;
-		break;
-	case DR1C:
-	case DR2C:
-	case DR3C:
-	case DR4C:
-		p_IDFrame->nodeId = (funId - DR1C) + DET_IOU01_ID;
-		break;
-	case PASC:
-	case WARC:
-	case FATC:
-	case LMSC:
-	case CSOC:
-	case FLSC:
-	case REMC:
-	case KNMC:
-	case KSPC:
-	case KARC:
-	case KLAC:
-	case KLBC:
-	case KLCC:
-	case KLDC:
-	case KLEC:
-	case KTSC:
-		p_IDFrame->nodeId = MAU_ID;
-		break;
-	default:
-		break;
-	}
-
-	memcpy(send_dataFrame.data, pSendData, iDataLen);
-	
-	Candata->dataA[0] = send_dataFrame.ifExt + (send_dataFrame.ifFirmware<<1) + (send_dataFrame.reserver<<3);
-	Candata->dataA[1] = (send_dataFrame.dataType&0xFF00)>>8;
-	Candata->dataA[2] = send_dataFrame.dataType&0x00FF;
-	Candata->dataA[3] = send_dataFrame.data[0];
-	Candata->dataB[0] = send_dataFrame.data[1];
-	Candata->dataB[1] = send_dataFrame.data[2];
-	Candata->dataB[2] = send_dataFrame.data[3];
-	Candata->dataB[3] = send_dataFrame.data[4];
+	uint16_t i=0;
+	uint32_t SENDID;
+	CAN_MSG_Type TxMessage;
 
 	
-	memcpy(&Candata->id, p_IDFrame, 4);
-	Candata->format = STD_ID_FORMAT;
-	Candata->type = DATA_FRAME;
+	SENDID = (0x01<<7)|addr;
 	
-	CAN_SendMsg(ch,Candata);
+	TxMessage.format = STD_ID_FORMAT;
+	TxMessage.id = SENDID;
+	TxMessage.type = DATA_FRAME;
 	
-	return 0;
-}
-
-
-void Send_Heartbeat(void)
-{
-	memset(&sCANFRAME,0x00,sizeof(sCANFRAME));
-	sCANFRAME.format = STD_ID_FORMAT;
-	sCANFRAME.len = 0;
-	sCANFRAME.id = 1ul<<28;
-	sCANFRAME.type = DATA_FRAME;
-	
-	CAN_SendMsg(CAN_1,&sCANFRAME);
-	CAN_SendMsg(CAN_2,&sCANFRAME);
-
-}
-
-
-void SSU_data_convert(void)
-{
-	if(RPCU[0]<0)
+    
+	if((len<=8)&&(len>0))
 	{
-		RPCU[0] -= 0x80;
-		RPCU[0] = ~RPCU[0];
-		RPCU[0] += 0x01;
-	}
-	
-	if(RPCU[1]<0)
-	{
-		RPCU[1] -= 0x80;
-		RPCU[1] = ~RPCU[1];
-		RPCU[1] += 0x01;
-	}
-	
-	if(RPCU[2]<0)
-	{
-		RPCU[2] -= 0x80;
-		RPCU[2] = ~RPCU[2];
-		RPCU[2] += 0x01;
-		RPCU[2] |= 0x80;
-	}
-}
-
-/*********************************************************************************************************
-** Functoin name:       CAN_Protocol_Process
-** Descriptions:        ½ÓÊÜCANÊý¾Ý½øÈë×´Ì¬»ú´¦Àí¡£
-** input paraments:  
-**                      *MessageCAN:  ´æ·ÅCANÖ¡ÐÅÏ¢µÄ½á¹¹Ìå
-** output paraments:    ÎÞ    
-** Returned values:     ÎÞ
-*********************************************************************************************************/
-void CAN_Protocol_Process(MessageDetail *MessageCAN)
-{	
-	uint8_t DATA_Frame[8];
-	t_IDFrame *p_IDFrame;
-	
-	DATA_Frame[0] 	= 	MessageCAN->DATAA&0x000000FF;
-	DATA_Frame[1]	= 	(MessageCAN->DATAA&0x0000FF00)>>8;
-	DATA_Frame[2]	= 	(MessageCAN->DATAA&0x00FF0000)>>16;
-	DATA_Frame[3]	= 	(MessageCAN->DATAA&0xFF000000)>>24;
-	DATA_Frame[4]	= 	MessageCAN->DATAB&0x000000FF;
-	DATA_Frame[5]	= 	(MessageCAN->DATAB&0x0000FF00)>>8;
-	DATA_Frame[6]	= 	(MessageCAN->DATAB&0x00FF0000)>>16;
-	DATA_Frame[7]	= 	(MessageCAN->DATAB&0xFF000000)>>24;
-	
-	p_IDFrame = (t_IDFrame *) (&(MessageCAN->CANID));
-	rec_dataFrame.ifExt = DATA_Frame[0] & 0x03;
-	rec_dataFrame.ifFirmware = (DATA_Frame[0] & 0x06)>>1;
-	rec_dataFrame.reserver = (DATA_Frame[0] & 0xF8)>>3;
-	rec_dataFrame.dataType = (DATA_Frame[2]<<8)+DATA_Frame[1];
-	for(uint8_t i=0;i<5;i++)
-	{
-		rec_dataFrame.data[i] = DATA_Frame[i+3];
-	}
-	
-	if (p_IDFrame->dataType == HEART_BEAT)
-	{
-		all_dev[p_IDFrame->nodeId].dev_active = DEV_STATUS_ACTIVE;
-		all_dev[p_IDFrame->nodeId].time_count = 0;
+		TxMessage.len = len;
 		
-		p_IDFrame->addrType = ID_REV;
-		
-		switch(p_IDFrame->nodeId)
+		if(len<=4)
 		{
-			case SSU_ID:
-					Boardstatus.SSU_OFFLINE = 0;
-				
-			break;
-			case MAU_ID:
-					Boardstatus.MAU_OFFLINE = 0;
-				
-			break;
-			case PDU1_ID:
-			case PDU2_ID:
-			case PDU3_ID:
-			case PDU4_ID:
-			case PDU5_ID:
-			case PDU6_ID:
-			case PDU7_ID:
-			case PDU8_ID:
-				if(p_IDFrame->nodeId<PDU_NUM+8)
-				{	
-					Boardstatus.PDU_OFFLINE |= 0x00<<(p_IDFrame->nodeId-8);	
-				}	
-			break;
-			case DET_IOU01_ID:
-			case DET_IOU02_ID:
-			case DET_IOU03_ID:
-			case DET_IOU04_ID:
-			case DET_IOU05_ID:
-			break;
-			default:
-				break;
+			for(i=0; i<len; i++)
+			{
+				TxMessage.dataA[i] = *ptr++;
+			}
 		}
-		
-	}
-	else if (p_IDFrame->dataType == APP_DATA)
-	{
-		switch (rec_dataFrame.dataType)
-		{
-			case MLMS:							//"MLMS" ÍâµÆ×´Ì¬
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				sStatus.bToggleOn = CTRL_ACTIVE;		//MAU	ÍâµÆ´ò¿ª		
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bToggleOn = CTRL_INACTIVE;		//MAU	ÍâµÆ¹Ø±Õ		
-			}
-			if(sStatus.bToggleOn)   //ÍâµÆ¿ª¹Ø
-			{
-
-					RMCM[0] &= 0xFE;
-					RMCM[0] |= !LAMPON;
-					RMCMTEMP[0] |= !LAMPON;
-				
-			}
-			else
-			{
-
-					RMCM[0] &= 0xFE;
-					RMCM[0] |= !LAMPOFF;
-					RMCMTEMP[0] |= !LAMPOFF;
-
-			}
-			
-			break;
-			case MMAS:		//ï¿½Ö¿Ø¿ï¿½ï¿½ï¿½		"MMAS"
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				sStatus.bManualOn = CTRL_ACTIVE;		//MAUæ‰‹æŽ§å¼€å…³ä¸º"æ‰“å¼€"ä½ç½®ï¼Œåº”ç”¨ç¨‹åºä¸­åº”æ•æ‰å˜åŒ–çŠ¶æ€?			
-        
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bManualOn = CTRL_INACTIVE;		//MAUæ‰‹æŽ§å¼€å…³ä¸º"å…³é—­"ä½ç½®ï¼Œåº”ç”¨ç¨‹åºä¸­åº”æ•æ‰å˜åŒ–çŠ¶æ€?			
-			}
-			if(sStatus.bManualOn)
-			{
-
-				if(MCM.KeypadStatus)
-				{
-					RMCM[0] &= 0xF1;
-					RMCM[0] |= KP_MANUAL;
-				}
-				else
-				{
-					RMCMTEMP[0] &= 0xF1;
-					RMCMTEMP[0] |= KP_MANUAL;
-					GetMaustatus = 1;
-				}
-				
-			}
-			else
-			{
-				if(MCM.KeypadStatus)
-				{
-					RMCM[0] &= 0xF1;
-					RMCM[0] |= KP_NORMAL;
-				}
-				else
-				{
-					RMCMTEMP[0] &= 0xF1;
-					RMCMTEMP[0] |= KP_NORMAL;
-					GetMaustatus = 1;
-				}
-			}
-      
-			break;
-			case MFSS:		//ï¿½ï¿½Ë¸ï¿½ï¿½ï¿½ï¿½		"MFSS"
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				sStatus.bFlashOn = CTRL_ACTIVE;	//MAUæ‰‹æŽ§é—ªçƒå¼€å…³ä¸º"æ‰“å¼€"ä½ç½®ï¼Œåº”ç”¨ç¨‹åºä¸­åº”æ•æ‰å˜åŒ–çŠ¶æ€?			
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bFlashOn = CTRL_INACTIVE;	//MAUæ‰‹æŽ§é—ªçƒå¼€å…³ä¸º"å…³é—­"ä½ç½®ï¼Œåº”ç”¨ç¨‹åºä¸­åº”æ•æ‰å˜åŒ–çŠ¶æ€?			
-			}
-			if(sStatus.bFlashOn)
-			{
-				if(MCM.KeypadStatus)
-				{
-					RMCM[0] &= 0xF1;
-					RMCM[0] |= KP_PT;
-				}
-				else
-				{
-					RMCMTEMP[0] &= 0xF1;
-					RMCMTEMP[0] |= KP_PT;
-					GetMaustatus = 1;
-				}
-
-			}
-			else
-			{
-				
-				if(MCM.KeypadStatus)
-				{
-					RMCM[0] &= 0xF1;
-					if(sStatus.bManualOn)
-					{
-						RMCM[0] |= KP_MANUAL;
-					}
-					else
-					{
-						RMCM[0] |= KP_NORMAL;
-					}
-				}
-				else
-				{
-					RMCMTEMP[0] &= 0xF1;
-					if(sStatus.bManualOn)
-					{
-						RMCMTEMP[0] |= KP_MANUAL;
-					}
-					else
-					{
-						RMCMTEMP[0] |= KP_NORMAL;
-					}
-					GetMaustatus = 1;
-				}	
-			}
-			
-			break;
-			
-			
-			case MRTS:	//Ò£ï¿½Ø¿ï¿½ï¿½ï¿½		"MRTS"
-				if (rec_dataFrame.data[0] == COMMAND_EN)
-				{
-					sStatus.bRemoteOn = CTRL_ACTIVE;	//MAUæ‰‹æŽ§é¥æŽ§å¼€å…³ä¸º"æ‰“å¼€"ä½ç½®ï¼Œåº”ç”¨ç¨‹åºä¸­åº”æ•æ‰å˜åŒ–çŠ¶æ€?			
-				}
-				else if (rec_dataFrame.data[0] == COMMAND_DIS)
-				{
-					sStatus.bRemoteOn = CTRL_INACTIVE;	//MAUæ‰‹æŽ§é¥æŽ§å¼€å…³ä¸º"å…³é—­"ä½ç½®ï¼Œåº”ç”¨ç¨‹åºä¸­åº”æ•æ‰å˜åŒ–çŠ¶æ€?			
-				}
-				break;
-			case MKYS:	//ï¿½ï¿½ï¿½ó°´¼ï¿½
-			{
-				sStatus.cKey = rec_dataFrame.data[0];	//Êµï¿½Ê°ï¿½ï¿½ï¿½ï¿?	
-				if(MCM.KeypadStatus)
-				{
-					RMCM[0] &= 0x0F;
-					if(sStatus.cKey == 0)
-					{
-						RMCM[0] |= 9<<4;
-					}
-					else if(sStatus.cKey == 9)
-					{
-						RMCM[0] |= 0<<4;
-					}
-					else
-					{
-						RMCM[0] |= 0xFE;
-					}
-				}
-				else
-				{
-					RMCMTEMP[0] &= 0x0F;
-					if(sStatus.cKey == 0)
-					{
-						RMCMTEMP[0] |= 9<<4;
-					}
-					else if(sStatus.cKey == 9)
-					{
-						RMCMTEMP[0] |= 0<<4;
-					}
-					else
-					{
-						RMCMTEMP[0] |= 0xFE;
-					}
-					GetMaustatus = 1;
-				}
-				
-				
-			}
-				break;
-			case MAVS:
-			
-			break;
-		case MFUS:	//MAUï¿½ï¿½ï¿½ï¿½×´Ì¬	"MAUS"
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				sStatus.bMfuWork = STATUS_ACTIVE;
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bMfuWork = STATUS_INACTIVE;
-			}
-			break;
-		case ACSA:	//SSUæ£€æµ‹çš„äº¤æµæŽ‰ç”µçŠ¶æ€?			if (rec_dataFrame.data[0] == COMMAND_EN)
-			if (rec_dataFrame.data[0] == COMMAND_EN)	
-			{
-				sStatus.bACSA = STATUS_ACTIVE;
-				
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bACSA = STATUS_INACTIVE;
-				
-				
-			}
-			break;
-		case DCFS:	//SSUæ£€æµ‹çš„ç›´æµæŽ‰ç”µçŠ¶æ€?			if (rec_dataFrame.data[0] == COMMAND_EN)
-			if (rec_dataFrame.data[0] == COMMAND_EN)	
-			{
-				sStatus.bDcFail = STATUS_ACTIVE;
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bDcFail = STATUS_INACTIVE;
-			}
-			break;
-		case SAMS:	//SSUæ£€æµ‹åˆ°çš„å››ä¸ªçŽ¯å¢ƒå˜é‡çŠ¶æ€ï¼ŒåŒ…æ‹¬äº¤æµç”µåŽ‹ã€ç›´æµç”µåŽ‹ã€äº¤æµé¢‘çŽ‡å’Œæ¸©åº¦
-			sStatus.cAcVolt = rec_dataFrame.data[0];
-			sStatus.cDcVolt = rec_dataFrame.data[1];
-			sStatus.cAcFreq = rec_dataFrame.data[2];
-			sStatus.cTemp = rec_dataFrame.data[3];
-			
-			RPCU[0] = sStatus.cTemp;
-			RPCU[1] = sStatus.cAcVolt-130;
-			RPCU[2] = sStatus.cAcFreq-50;
-			//SSU_data_convert();
-			
-			
-			
-			break;
-		case ACSD:
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				if((!sStatus_history.bACSD)&&initfinishflg)
-				{
-					if(!LampTest.enable)
-						RstFlgReboot = 1;	
-				}
-					
-				sStatus.bACSD = STATUS_ACTIVE;
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				if((sStatus_history.bACSD)&&initfinishflg)
-				{
-					LAMPOFF_OP_Flag = 1;
-				}
-				sStatus.bACSD = STATUS_INACTIVE;
-				
-			}
-			sStatus_history.bACSD = sStatus.bACSD;
-			break;
-			
-		case ACSC:
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				sStatus.bACSC = STATUS_ACTIVE;
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bACSC = STATUS_INACTIVE;
-			}
-			break;
-		case ACSB:
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				sStatus.bACSB = STATUS_ACTIVE;
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bACSB = STATUS_INACTIVE;
-			}
-			break;
-		case SSVS:
-			break;
-		case ACSE:
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				sStatus.bACSE = STATUS_ACTIVE;
-				ACFAILtimeCnt = 0;
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bACSE = STATUS_INACTIVE;
-				ACFAILtimeCnt = MAXACFAILTIME;
-			}
-			break;
-		case MAUS:	//MAUï¿½ï¿½ï¿½ï¿½×´Ì¬	"MAUS"
-			if (rec_dataFrame.data[0] == COMMAND_EN)
-			{
-				sStatus.bMauEncryption = STATUS_ACTIVE;
-			}
-			else if (rec_dataFrame.data[0] == COMMAND_DIS)
-			{
-				sStatus.bMauEncryption = STATUS_INACTIVE;
-			}
-			break;
-		case PD1S:
-		case PD2S:
-		case PD3S:
-		case PD4S:
-		case PD5S:
-		case PD6S:
-		case PD7S:
-		case PD8S:	//PDUæ£€æµ‹åˆ°çš„å››ä¸ªé€šé“çš„å„ä¿¡å·ç¯çš„å®žæ—¶ç›‘æµ‹çŠ¶æ€?			if (rec_dataFrame.ifFirmware == FIRMWARE_NOT)
-			{
-				switch (rec_dataFrame.ifExt)
-				{
-					case 0:
-						break;
-					case 1:
-						memcpy((uint8_t*) &sStatus.sLoadCheck[rec_dataFrame.dataType - PD1S], rec_dataFrame.data, 5);
-						break;
-					case 2:
-						memcpy((uint8_t*) &sStatus.sLoadCheck[rec_dataFrame.dataType - PD1S] + 5, rec_dataFrame.data,
-								5);
-						break;
-					case 3:
-						if (rec_dataFrame.data[0] == COMMAND_EN)
-						{
-							sStatus.sLoadCheck[rec_dataFrame.dataType - PD1S].power = STATUS_ACTIVE;
-						}
-						else if (rec_dataFrame.data[0] == COMMAND_DIS)
-						{
-							sStatus.sLoadCheck[rec_dataFrame.dataType - PD1S].power = STATUS_INACTIVE;
-						}
-						break;
-					default:
-						break;
-				}
-				PDU_DATA_READY = 1;
-				
-				for(uint8_t i=0;i<8;i++)
-				{
-					if(PDUR[i].amp1<sStatus.sLoadCheck[i].current[0]) PDUR[i].amp1 = sStatus.sLoadCheck[i].current[0];
-					if(PDUR[i].amp2<sStatus.sLoadCheck[i].current[1]) PDUR[i].amp2 = sStatus.sLoadCheck[i].current[1];
-					if(PDUR[i].amp3<sStatus.sLoadCheck[i].current[2]) PDUR[i].amp3 = sStatus.sLoadCheck[i].current[2];
-					if(PDUR[i].amp4<sStatus.sLoadCheck[i].current[3]) PDUR[i].amp4 = sStatus.sLoadCheck[i].current[3];
-					
-				}
-			}
-			break;
-		case PDVS:
-			break;
-		case DT1S:
-		case DT2S:
-		case DT3S:
-		case DT4S:	//DETçš?ä¸ªæ£€æµ‹é€šé“100æ¯«ç§’å†…é‡‡é›†åˆ°çš„æ£€æµ‹çŠ¶æ€åŠé€šé“æ•…éšœçŠ¶æ€?			if (rec_dataFrame.ifFirmware == FIRMWARE_NOT)
-			{
-				switch (rec_dataFrame.ifExt)
-				{
-					case NO_EXT:
-						break;
-					case DATA_BEGIN:
-						memcpy((uint8*) (sStatus.sDetCheck[(rec_dataFrame.dataType - DT1S)]), rec_dataFrame.data, 5);
-						break;
-					case DATA_MIDD:
-						break;
-					case DATA_END:
-						memcpy((uint8*) (sStatus.sDetCheck[(rec_dataFrame.dataType - DT1S)]) + 5, rec_dataFrame.data,
-								3);
-						break;
-					default:
-						break;
-				}
-			}
-			Det_IOU_Dataconvert();
-			break;
-		case DTVS:
-			
-			break;
-		case IO1S:
-		case IO2S:
-		case IO3S:
-		case IO4S:	//IOUçš?ä¸ªæ£€æµ‹é€šé“100æ¯«ç§’å†…é‡‡é›†åˆ°çš„æ£€æµ‹çŠ¶æ€?			if (rec_dataFrame.ifFirmware == FIRMWARE_NOT)
-			{
-				switch (rec_dataFrame.ifExt)
-				{
-					case NO_EXT:
-						break;
-					case DATA_BEGIN:
-						memcpy((uint8*) (sStatus.sDetCheck[(rec_dataFrame.dataType - IO1S)]), rec_dataFrame.data, 5);	//ions replaced by dtns
-						break;
-					case DATA_MIDD:
-						break;
-					case DATA_END:
-						memcpy((uint8*) (sStatus.sDetCheck[(rec_dataFrame.dataType - IO1S)]) + 5, rec_dataFrame.data,
-								3);	//ions replaced by dtns
-						break;
-					default:
-						break;
-				}
-			}
-			Det_IOU_Dataconvert();
-			break;
-		case IOVS:
-			break;
-		default:
-			break;
-       
-		}
-	}
-	
-}	
-
-
-//CPU·¢ËÍCAN0/1×ÜÏßÉÏµÄ¸÷ÀàÃüÁîÖÁÆäËûÄ£¿é
-void SendCanCommand(uint16_t nCmdNo)
-{
-	uint8 cSendData[4];
-	uint8 cSendLen = 1;
-	//CANFRAME data;
-	CAN_MSG_Type data;
-	bool bSendOn=0;
-
-
-	memset(cSendData, 0, 4);
-	switch (nCmdNo)
-	{
-		case LMPC:								//LMPC£º¼à¿ØÔ­ÖµµÄ±ä»¯×´Ì¬£¬±ä»¯Ê±·¢ËÍ
-			if (s_command_history.bLoadRelayOn != sCommand.bLoadRelayOn)
-			{
-				cSendData[0] = (sCommand.bLoadRelayOn == CTRL_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bLoadRelayOn = sCommand.bLoadRelayOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case DIMC:								//DIMC£º¼à¿ØÔ­ÖµµÄ±ä»¯×´Ì¬£¬±ä»¯Ê±·¢ËÍ
-			if (s_command_history.bDimRelayOn != sCommand.bDimRelayOn)
-			{
-				cSendData[0] = (sCommand.bDimRelayOn == CTRL_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bDimRelayOn = sCommand.bDimRelayOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case MFUC:								//MFUC£º¼à¿ØÔ­ÖµµÄ±ä»¯×´Ì¬£¬±ä»¯Ê±·¢ËÍ
-			if (s_command_history.bMfuRelayOn != sCommand.bMfuRelayOn)
-			{
-				cSendData[0] = (sCommand.bMfuRelayOn == CTRL_INACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bMfuRelayOn = sCommand.bMfuRelayOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case PASC:								//PASC£º¼à¿ØÔ­ÖµµÄ±ä»¯×´Ì¬£¬±ä»¯Ê±·¢ËÍ
-			if (s_command_history.cMauPass != sCommand.cMauPass)
-			{
-				cSendData[0] = sCommand.cMauPass;
-				s_command_history.cMauPass = sCommand.cMauPass;
-
-				bSendOn = 1;
-			 }
-			break;
-		case PD1C:
-		case PD2C:
-		case PD3C:
-		case PD4C:
-		case PD5C:
-		case PD6C:
-		case PD7C:
-		case PD8C:								
-
-				memcpy(cSendData, PDUDRV, 4);
-				cSendLen = 4;		//¸ÄÐ´·¢ËÍ³¤¶È
-
-				bSendOn = 1;
-			break;
-		case IO1C:
-		case IO2C:
-		case IO3C:
-		case IO4C:
-		case IO5C:								//IONC£º¼à¿ØÔ­ÖµµÄ±ä»¯×´Ì¬£¬±ä»¯Ê±·¢ËÍ
-			if (*(uint8*) (&s_command_history.sLogicDrv[nCmdNo - IO1C])
-					!= *(uint8*) (&sCommand.sLogicDrv[nCmdNo - IO1C]))
-			{
-				memcpy(cSendData, &sCommand.sLogicDrv[nCmdNo - IO1C], sizeof(SbitDrv));
-
-				memcpy(&s_command_history.sLogicDrv[nCmdNo - IO1C],
-						&sCommand.sLogicDrv[nCmdNo - IO1C], sizeof(SbitDrv));
-
-				bSendOn = 1;
-			}
-			break;
-		case DR1C:
-		case DR2C:
-		case DR3C:
-		case DR4C:							//DRNC£º¼à¿ØÊýÖµÊÇ·ñÓÐÐ§£¬ÊÇÔò·¢ËÍ£¬±äÁ¿×Ô»Ö¸´
-			if (sCommand.cIouDetReset[nCmdNo - DR1C] == CTRL_ACTIVE)
-			{
-				cSendData[0] = COMMAND_ENABLE;
-				sCommand.cIouDetReset[nCmdNo - DR1C] = CTRL_INACTIVE;
-
-				bSendOn = 1;
-			}
-			break;
-		case WARC:								//ÐÅºÅ»ú¾¯¸æ¹ÊÕÏ×´Ì¬
-			if (s_command_history.bWarn != sCommand.bWarn)
-			{
-				cSendData[0] = (sCommand.bWarn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bWarn = sCommand.bWarn;
-
-				bSendOn = 1;
-			}
-			break;
-		case FATC:								//ÐÅºÅ»úÑÏÖØ¹ÊÕÏ×´Ì¬
-			if (s_command_history.bFatal != sCommand.bFatal)
-			{
-				cSendData[0] = (sCommand.bFatal == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bFatal = sCommand.bFatal;
-
-				bSendOn = 1;
-			}
-			break;
-		case LMSC:								//ÐÅºÅ»úÍâµÆÍ¨µÀÊä³ö¿ª¹Ø×´Ì¬
-			 if (s_command_history.bLoadStatus != sCommand.bLoadStatus)
-			 {
-				cSendData[0] = (sCommand.bLoadStatus == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bLoadStatus = sCommand.bLoadStatus;
-
-				bSendOn = 1;
-			 }
-			break;
-		case CSOC:								//ÐÅºÅ»ú¿ØÖÆÔ´×´Ì¬
-			if (s_command_history.cCtrlSource != sCommand.cCtrlSource)
-			{
-				cSendData[0] = sCommand.cCtrlSource;
-				s_command_history.cCtrlSource = sCommand.cCtrlSource;
-
-				bSendOn = 1;
-			}
-			break;
-		case FLSC:								//ÐÅºÅ»úÉÁµÆ×´Ì¬
-			if (s_command_history.cFlashSource != sCommand.cFlashSource)
-			{
-				cSendData[0] = sCommand.cFlashSource;
-				s_command_history.cFlashSource = sCommand.cFlashSource;
-
-				bSendOn = 1;
-			}
-			break;
-		case REMC:								//ÐÅºÅ»úÒ£¿Ø¹¤×÷×´Ì¬
-			if (s_command_history.bRemoteOpen != sCommand.bRemoteOpen)
-			{
-				cSendData[0] = (sCommand.bRemoteOpen == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bRemoteOpen = sCommand.bRemoteOpen;
-
-				bSendOn = 1;
-			}
-			break;
-		case KNMC:								//Êý×Ö¼ü×´Ì¬	"KNMC"
-			if (*(uint8*) (&s_command_history.sKeyNum) != *(uint8*) (&sCommand.sKeyNum))
-			{
-				memcpy(cSendData, &sCommand.sKeyNum, sizeof(SbitDrv));
-				memcpy(&s_command_history.sKeyNum, &sCommand.sKeyNum, sizeof(SbitDrv));
-
-				bSendOn = 1;
-			}
-			break;
-		case KSPC:								//²½½ø×´Ì¬
-			if (s_command_history.bKeyStepOn != sCommand.bKeyStepOn)
-			{
-				cSendData[0] = (sCommand.bKeyStepOn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bKeyStepOn = sCommand.bKeyStepOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case KARC:								//È«ºì×´Ì¬
-			if (s_command_history.bKeyAllRedOn != sCommand.bKeyAllRedOn)
-			{
-				cSendData[0] = (sCommand.bKeyAllRedOn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bKeyAllRedOn = sCommand.bKeyAllRedOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case KLAC:								//¼üA 			"KLAC"
-			if (s_command_history.bKeyAOn != sCommand.bKeyAOn)
-			{
-				cSendData[0] = (sCommand.bKeyAOn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bKeyAOn = sCommand.bKeyAOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case KLBC:								//¼üB 			"KLBC"
-			if (s_command_history.bKeyBOn != sCommand.bKeyBOn)
-			{
-				cSendData[0] = (sCommand.bKeyBOn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bKeyBOn = sCommand.bKeyBOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case KLCC:								//¼üC 			"KLCC"
-			if (s_command_history.bKeyCOn != sCommand.bKeyCOn)
-			{
-				cSendData[0] = (sCommand.bKeyCOn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bKeyCOn = sCommand.bKeyCOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case KLDC:								//¼üD			"KLDC"
-			if (s_command_history.bKeyDOn != sCommand.bKeyDOn)
-			{
-				cSendData[0] = (sCommand.bKeyDOn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bKeyDOn = sCommand.bKeyDOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case KLEC:                                //¼üE
-			if (s_command_history.bKeyEOn != sCommand.bKeyEOn)
-			{
-				cSendData[0] = (sCommand.bKeyEOn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bKeyEOn = sCommand.bKeyEOn;
-
-				bSendOn = 1;
-			}
-			break;
-		case KTSC:								//¼üµÆ²âÊÔ
-			if (s_command_history.bKeyTestOn != sCommand.bKeyTestOn)
-			{
-				cSendData[0] = (sCommand.bKeyTestOn == STATUS_ACTIVE) ?
-				COMMAND_ENABLE :COMMAND_DISABLE;
-				s_command_history.bKeyTestOn = sCommand.bKeyTestOn;
-
-				bSendOn = 1;
-			}
-			break;
-
-		default:
-			break;
-	}
-
-	if (bSendOn)
-	{
-		frame_organise(nCmdNo, &data, cSendData, cSendLen);
-
-		bSendOn = 0;
-	}
-	
-}
-
-
-void SSU_COMM(void)
-{
-	if(PCU.LampSwitch)
-	{
-		sCommand.bLoadRelayOn = CTRL_ACTIVE;
-		SendCanCommand(LMPC);
-	}
-	else
-	{
-		sCommand.bLoadRelayOn = CTRL_INACTIVE;
-		SendCanCommand(LMPC);
-	}
-	if(PCU.LampLevel)
-	{
-		sCommand.bDimRelayOn = CTRL_ACTIVE;
-		SendCanCommand(DIMC);
-	}
-	else
-	{
-		sCommand.bDimRelayOn = CTRL_INACTIVE;
-		SendCanCommand(DIMC);
-	}
-}
-
-void MAU_COMM(void)
-{
-	if(LampSupply)
-	{
-		sCommand.bLoadStatus = CTRL_ACTIVE;
-		SendCanCommand(LMSC);
-	}
-	else
-	{
-		sCommand.bLoadStatus = CTRL_INACTIVE;
-		SendCanCommand(LMSC);
-	}
-	
-	
-	if(MCM.AllRed)//È«ºì
-	{
-		sCommand.bKeyAllRedOn = CTRL_ACTIVE;
-		SendCanCommand(KARC);
-	}
-	else
-	{
-		sCommand.bKeyAllRedOn = CTRL_INACTIVE;
-		SendCanCommand(KARC);
-	}
-	
-	if(MCM.KeypadStatus)//¼üËø×´Ì¬
-	{
-		sCommand.cMauPass = STATUS_INACTIVE;
-		SendCanCommand(PASC);
-	}
-	else
-	{
-		sCommand.cMauPass = 0x10;
-		SendCanCommand(PASC);
-	}
-	
-	if(MCM.TSCFault)//¹ÊÕÏ
-	{
-		sCommand.bWarn = STATUS_ACTIVE;
-		SendCanCommand(WARC);
-	}
-	else
-	{
-		sCommand.bWarn = STATUS_INACTIVE;
-		SendCanCommand(WARC);
-	}
-	
-	if(MCM.LocalRemote == 0x01)
-	{
-		sCommand.cCtrlSource = 0x02;
-		SendCanCommand(CSOC);
-		
-		sCommand.bRemoteOpen = STATUS_INACTIVE;
-		SendCanCommand(REMC);
-	}
-	else if(MCM.LocalRemote == 0x03)
-	{
-		sCommand.bRemoteOpen = STATUS_ACTIVE;
-		SendCanCommand(REMC);
-		
-		sCommand.cCtrlSource = 0x00;
-		SendCanCommand(CSOC);
-	}
-	else if(MCM.LocalRemote == 0x00)
-	{
-		sCommand.cCtrlSource = 0x00;
-		SendCanCommand(CSOC);
-		
-		sCommand.bRemoteOpen = STATUS_INACTIVE;
-		SendCanCommand(REMC);
-	}
-	
-	if(sStatus.bManualOn)
-	{
-		sCommand.bKeyStepOn = MCM.KeypadStatus;
-		SendCanCommand(KSPC);
-	}
-	else
-	{
-		sCommand.bKeyStepOn = STATUS_INACTIVE;
-		SendCanCommand(KSPC);
-	}
-	
-	if((Strm[0].cmode == FTMODE) ||(Strm[0].cmode == CLFMODE))  //×Ô¶¯
-	{
-		sCommand.cCtrlSource = 0x06;
-		SendCanCommand(CSOC);
-		
-		sCommand.cFlashSource = 0x01;
-		SendCanCommand(FLSC);
-		
-		sCommand.bRemoteOpen = STATUS_INACTIVE;
-		SendCanCommand(REMC);
-	}
-	else if (Strm[0].cmode == MCMODE)   //ÊÖ¶¯
-	{
-		sCommand.cCtrlSource = 0x05;
-		SendCanCommand(CSOC);
-		
-		sCommand.cFlashSource = 0x01;
-		SendCanCommand(FLSC);
-		
-		sCommand.bRemoteOpen = STATUS_INACTIVE;
-		SendCanCommand(REMC);
-	}
-	if (Strm[0].cmode == PTMODE)   //´ý»ú
-	{
-		if(sStatus.bFlashOn)
-			sCommand.cFlashSource = 0x04;
 		else
-			sCommand.cFlashSource = 0x03;
-		
-		
-		SendCanCommand(FLSC);
-		
-		sCommand.cCtrlSource = 0x08;
-		SendCanCommand(CSOC);
-		
-		sCommand.bRemoteOpen = STATUS_INACTIVE;
-		SendCanCommand(REMC);
+		{
+			for(i=0; i<4; i++)
+			{
+				TxMessage.dataA[i] = *ptr++;
+			}
+			for(i=0; i<len-4; i++)
+			{
+				TxMessage.dataB[i] = *ptr++;
+			}
+		}
+			
 	}
-  
+	else
+	{
+		TxMessage.len = 0;
+	}	
+
+	return CAN_SendMsg(ch,&TxMessage);;
 }
+//½ÓÊÕCANÊý¾ÝÖ¡£¬×÷¹¦ÄÜÊ¶±ð
+void Receive_CAN_DataFrame(MessageDetail* canRx,uint8_t num)
+{
+	uint8_t *prt_rx;
+	if(num!=5)
+	{
+		ev_CanRespone=CAN_EV_ResFail;
+		return;
+	}
+	prt_rx=(uint8_t *)(&receive_Frame);
+
+	*((uint32_t*)prt_rx)= canRx->DATAA;
+	*(prt_rx+4)=canRx->DATAB;
+	
+	if(DataCheckSum((uint8_t *)(&receive_Frame),4)!=receive_Frame.check_sum)
+	{
+		ev_CanRespone=CAN_EV_ResFail;
+		return;
+	}
+	
+	CAN1_RxMessage_Deal(&receive_Frame);
+
+}
+//½ÓÊÕCANÊý¾ÝÖ¡£¬×÷¹¦ÄÜÊ¶±ð
+void Receive_CAN2_DataFrame(MessageDetail* canRx,uint8_t num)
+{
+	uint8_t *prt_rx;
+	if(num!=5)
+	{
+		ev_CanRespone=CAN_EV_ResFail;
+		return;
+	}
+	prt_rx=(uint8_t *)(&receive_Frame2);
+
+	*((uint32_t*)prt_rx)= canRx->DATAA;
+	*(prt_rx+4)=canRx->DATAB;
+	
+	if(DataCheckSum((uint8_t *)(&receive_Frame2),4)!=receive_Frame2.check_sum)
+	{
+		ev_CanRespone=CAN_EV_ResFail;
+		return;
+	}
+	
+	CAN2_RxMessage_Deal(&receive_Frame2);
+
+}
+
+
+
 
 /*********************************************************************//**
  * @brief 		Setting CAN baud rate (bps)
@@ -1575,8 +607,10 @@ void CAN_IRQHandler (void)
             {
                CANRCV(j, &MessageCAN0);                                 /* ÊÕµ½CAN0ÖÐ¶Ï,½ÓÊÕÖ¡          */
 			   
-			   CAN_Protocol_Process(&MessageCAN0);
-               
+			   //Ìí¼ÓÓÃ»§´úÂë
+//			   CAN_Protocol_Process(&MessageCAN0);
+               Receive_CAN_DataFrame(&MessageCAN0,MessageCAN0.LEN);
+				
                regaddr = (unsigned long)(&LPC_CAN1->CMR)+j*CANOFFSET;                
                mes=RGE(regaddr);
                mes |= (1<<2);                                           /* ÊÍ·Å½ÓÊÕ»º³åÇø               */
@@ -1588,7 +622,9 @@ void CAN_IRQHandler (void)
             {
                CANRCV(j, &MessageCAN1);                                 /* ÊÕµ½CAN1ÖÐ¶Ï,½ÓÊÕÖ¡          */
 			   
-			   CAN_Protocol_Process(&MessageCAN1);
+				//Ìí¼ÓÓÃ»§´úÂë
+//			   CAN_Protocol_Process(&MessageCAN1);
+			   Receive_CAN2_DataFrame(&MessageCAN1,MessageCAN1.LEN);
 
                regaddr = (unsigned long)(&LPC_CAN1->CMR)+j*CANOFFSET;                
                mes=RGE(regaddr);

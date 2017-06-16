@@ -18,5 +18,7 @@
 .\objects\bsp_net.o: d:\Keil_v523\ARM\ARMCC\Bin\..\include\string.h
 .\objects\bsp_net.o: ..\USER\sys.h
 .\objects\bsp_net.o: ..\USER\delay.h
-.\objects\bsp_net.o: ..\BSP\bsp.h
-.\objects\bsp_net.o: ..\USER\bsp_include.h
+.\objects\bsp_net.o: ..\Driver\time.h
+.\objects\bsp_net.o: ..\Driver\LPC1700CAN.h
+.\objects\bsp_net.o: ..\USER\type.h
+.\objects\bsp_net.o: ..\BSP\bsp_pcf8563.h

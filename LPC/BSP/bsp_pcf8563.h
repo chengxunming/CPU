@@ -1,20 +1,100 @@
 /****************************************Copyright (c)****************************************************
-
+**                            Guangzhou ZHIYUAN electronics Co.,LTD.
+**
+**                                 http://www.embedtools.com
+**
 **--------------File Info---------------------------------------------------------------------------------
-** File name:                  PCF8563.c
-** Latest modified Date:       2014-1-8
+** File name:                  PCF8563.h
+** Latest modified Date:       2009-6-8
 ** Latest Version:
 ** Descriptions:
 **
 **--------------------------------------------------------------------------------------------------------
-** Created by:                 Qinqin
-** Created date:               2014-1-8
+** Created by:                 Zhangrong
+** Created date:               2009-6-8
+** Version:
+** Descriptions:
+**
+**--------------------------------------------------------------------------------------------------------
+** Modified by:                
+** Modified date:              2009-6-8
 ** Version:
 ** Descriptions:
 **
 *********************************************************************************************************/
-#include    "I2CINT.h"
-#include    "PCF8563.h"
+#ifndef __PCF8563_H
+#define __PCF8563_H
+
+#include "lpc177x_8x.h"
+
+#define INT8U    uint8_t
+#define INT16U   uint16_t
+#define INT32U   uint32_t
+//#define FALSE    0
+//#define TRUE     1
+
+typedef struct _PCF8563_DATE{
+   INT8U  second;
+   INT8U  minute;
+   INT8U  hour;
+   INT8U  date;
+   INT8U  week;
+   INT8U  month;
+   INT16U  year;
+}PCF8563_DATE;
+
+#define PCF8563ADR    0xA2
+/*********************************************************************************************************
+ *  定义:秒/分/时/日/星期/月/年
+ *********************************************************************************************************/
+#define Second      0x02
+#define Minute      0x03
+#define Hour        0x04
+#define Date        0x05
+#define Week        0x06
+#define Month       0x07
+#define Year        0x08
+/*********************************************************************************************************
+ *  报警设置
+ *********************************************************************************************************/
+#define AlarmEn      0x00
+#define AlarmDs      0x80
+/*********************************************************************************************************
+ *  ClkOut输出设置
+ *********************************************************************************************************/
+#define ClkOutEn    0x80
+#define ClkOutDs    0x00
+#define F32768Hz    0x00
+#define F1024Hz     0x01
+#define F32Hz       0x02
+#define F1Hz        0x03
+/**********************************************************************************************************
+ *  开关设置
+ **********************************************************************************************************/
+#define Start      1
+#define Stop       0
+/**********************************************************************************************************
+ *  定时器设置
+ **********************************************************************************************************/
+#define TimerOn         0x80
+#define TimerOff        0x00
+#define TimerClk4096Hz  0x00
+#define TimerClk64Hz    0x01
+#define TimerClk1Hz     0x02
+#define TimerClk1_64Hz  0x03
+/**********************************************************************************************************
+ *  中断设置
+ **********************************************************************************************************/
+#define SetINT      0x80
+#define ClearINT    0x40
+#define TITP        0x10
+#define AIE         0x02
+#define TIE         0x01
+/**********************************************************************************************************
+ *  数据转换
+ **********************************************************************************************************/
+#define  BCD_to_HEC(b)  (((b>>4)*10)+(b&0x0f))
+#define  HEC_to_BCD(h)  (((h/10)<<4)|(h%10))
 
 /*********************************************************************************************************
 ** Function name:       PCF8563_Set
@@ -23,29 +103,8 @@
 ** Output parameters:   NONE
 ** Returned value:      NONE
 *********************************************************************************************************/
-INT8U PCF8563_Set(PCF8563_DATE *tp)
-{
-   INT8U temp[7];
-   INT8U year;
+extern INT8U PCF8563_Set(PCF8563_DATE *tp);
 
-   temp[0] = HEC_to_BCD(tp->second);
-   temp[1] = HEC_to_BCD(tp->minute);
-   temp[2] = HEC_to_BCD(tp->hour);
-   temp[3] = HEC_to_BCD(tp->date);
-   temp[4] = tp->week;//HEC_to_BCD(tp->week);
-   temp[5] = HEC_to_BCD(tp->month);
-
-   if (tp->year >= 2000){
-      temp[5] |= 0x80;
-      year = tp->year - 2000;
-      temp[6] = HEC_to_BCD(year);
-   }
-   else{
-      year = tp->year - 1900;
-      temp[6] = HEC_to_BCD(year);
-   }
-   return(I2C_WriteNByte(PCF8563ADR, 1, 0x02, temp, 7));
-}
 /*********************************************************************************************************
 ** Function name:       PCF8563_Read
 ** Descriptions:        读取PCF8563
@@ -53,34 +112,7 @@ INT8U PCF8563_Set(PCF8563_DATE *tp)
 ** Output parameters:   FALSE or TRUE
 ** Returned value:      NONE
 *********************************************************************************************************/
-INT8U PCF8563_Read(PCF8563_DATE *tp)
-{
-   INT8U temp[7];
-
-   if (I2C_ReadNByte(PCF8563ADR, 1, 0x02, temp, 7)==FALSE)
-      return FALSE;
-
-   tp->second     = BCD_to_HEC((temp[0]&0x7f));
-   tp->minute     = BCD_to_HEC((temp[1]&0x7f));
-   tp->hour       = BCD_to_HEC((temp[2]&0x3f));
-   tp->date       = BCD_to_HEC((temp[3]&0x3f));
-   tp->week       = temp[4]&0x07;//BCD_to_HEC((temp[4]&0x07));
-  
-   if(tp->week==0)
-   {
-	   tp->week=0x07;                            //星期定义区别 星期天=0x00
-   }
-
-   if (temp[5]&0x80){
-      tp->month = BCD_to_HEC((temp[5]&0x1f));
-      tp->year  = BCD_to_HEC(temp[6])+2000;
-   }
-   else{
-      tp->month = BCD_to_HEC((temp[5]&0x1f));
-      tp->year  = BCD_to_HEC(temp[6])+1900;
-   }
-   return TRUE;
-}
+extern INT8U PCF8563_Read(PCF8563_DATE *tp);
 
 /*********************************************************************************************************
 ** Function name:       PCF8563_SS
@@ -90,16 +122,8 @@ INT8U PCF8563_Read(PCF8563_DATE *tp)
 ** Output parameters:   FALSE or TRUE
 ** Returned value:      NONE
 *********************************************************************************************************/
-INT8U PCF8563_SS(INT8U cmd)
-{
-   INT8U temp;
+extern INT8U PCF8563_SS(INT8U cmd);
 
-   if (cmd == Start)
-      temp = 0;
-   else
-      temp = 0x20;
-   return(I2C_WriteNByte(PCF8563ADR, 1, 0x00, &temp, 1));
-}
 /*********************************************************************************************************
 ** Function name:       PCF8563_Set_TD
 ** Descriptions:        设置PCF8563的时间和日期
@@ -114,46 +138,8 @@ INT8U PCF8563_SS(INT8U cmd)
 ** Output parameters:   FALSE or TRUE
 ** Returned value:      NONE
 *********************************************************************************************************/
-INT8U PCF8563_Set_TD(INT8U cmd, INT16U TD)
-{
-   INT8U d[2];
-   INT8U n;
-   INT8U temp;
-   INT8U err = TRUE;
+extern INT8U PCF8563_Set_TD(INT8U cmd, INT16U TD);
 
-   if (cmd == Year){
-      err &= I2C_ReadNByte(PCF8563ADR, 1, Month, d, 2);
-      d[0] &= 0x9f;
-      if (TD < 2000){
-         d[0] |= 0x80;
-         d[1] = TD -1900;
-      }
-      else{
-         d[0] &= ~(0x80);
-         d[1] = TD - 2000;
-      }
-      d[1] = HEC_to_BCD(d[1]);
-      n = 2;
-      cmd = Month;
-   }
-
-   else if (cmd == Month){
-      err &= I2C_ReadNByte(PCF8563ADR, 1, Month, &temp, 1);
-      temp &= 0x80;
-      d[0] = (INT8U)TD;
-      d[0] = HEC_to_BCD(d[0]);
-      d[0] = (d[0]|temp);
-      n = 1;
-   }
-
-   else {
-      d[0] = (INT8U)TD;
-      d[0] = HEC_to_BCD(d[0]);
-      n = 1;
-   }
-   err &= I2C_WriteNByte(PCF8563ADR, 1, cmd, d, n);
-   return err;
-}
 /*********************************************************************************************************
 ** Function name:       PCF8563_Get_TD
 ** Descriptions:        读取PCF8563的时间和日期
@@ -167,45 +153,8 @@ INT8U PCF8563_Set_TD(INT8U cmd, INT16U TD)
 ** Output parameters:   读取值
 ** Returned value:      NONE
 *********************************************************************************************************/
-INT16U PCF8563_Get_TD(INT8U cmd)
-{
-   INT8U d[2];
+extern INT16U PCF8563_Get_TD(INT8U cmd);
 
-   if (cmd == Year){
-      if (I2C_ReadNByte(PCF8563ADR, 1, Month, d, 2)==FALSE){
-         return FALSE;
-      }
-      d[1] = BCD_to_HEC(d[1]);
-      if (d[0]&0x80){
-         return ((INT16U)d[1]+1900);
-      }
-      else {
-         return ((INT16U)d[1]+2000);
-      }
-   }
-
-   I2C_ReadNByte(PCF8563ADR, 1, cmd, d, 1);
-   switch (cmd){
-   case Minute :
-   case Second :
-      d[0] &= 0x7f;
-      break;
-   case Hour :
-   case Date :
-      d[0] &= 0x3f;
-      break;
-   case Month :
-      d[0] &= 0x1f;
-      break;
-   case Week :
-      d[0] &= 0x07;
-      break;
-   default :
-      break;
-   }
-   d[0] = BCD_to_HEC(d[0]);
-   return (INT16U)d[0];
-}
 /*********************************************************************************************************
 ** Function name:       PCF8563_Set_ClkOut
 ** Descriptions:        设置PCF8563的输出时钟
@@ -218,10 +167,8 @@ INT16U PCF8563_Get_TD(INT8U cmd)
 ** Output parameters:   NONE
 ** Returned value:      ClkOutEn|F32768Hz  设置ClkOut输出32.768KHz方波
 *********************************************************************************************************/
-INT8U PCF8563_Set_ClkOut(INT8U cmd)
-{
-   return(I2C_WriteNByte(PCF8563ADR, 1, 0x0d, &cmd, 1));
-}
+extern INT8U PCF8563_Set_ClkOut(INT8U cmd);
+
 /*********************************************************************************************************
 ** Function name:       PCF8563_Set_Alarm
 ** Descriptions:        设置PCF8563的报警状态
@@ -235,19 +182,8 @@ INT8U PCF8563_Set_ClkOut(INT8U cmd)
 ** Output parameters:   NONE
 ** Returned value:      AlarmEn|Minute      使能分钟报警
 *********************************************************************************************************/
-INT8U PCF8563_Set_Alarm(INT8U cmd, INT8U tm)
-{
-   INT8U temp;
-   temp = 0;
+extern INT8U PCF8563_Set_Alarm(INT8U cmd, INT8U tm);
 
-   if ((cmd&0x80) == AlarmEn){
-      temp = HEC_to_BCD(tm);
-   }
-   else temp = 0x80;
-
-   cmd = (cmd&0x0f);
-   return(I2C_WriteNByte(PCF8563ADR, 1, cmd+6, &temp,1));
-}
 /*********************************************************************************************************
 ** Function name:       PCF8563_Set_Timer
 ** Descriptions:        设置PCF8563的定时器
@@ -261,13 +197,8 @@ INT8U PCF8563_Set_Alarm(INT8U cmd, INT8U tm)
 ** Output parameters:   NONE
 ** Returned value:      TimerOn|TimerClk4096Hz    使能定时器,设置时钟源频率4096Hz
 *********************************************************************************************************/
-INT8U PCF8563_Set_Timer(INT8U cmd, INT8U cnt)
-{
-   INT8U b[2];
-   b[0] = cmd;
-   b[1] = cnt;
-   return(I2C_WriteNByte(PCF8563ADR, 1, 0x0E, b, 2));
-}
+extern INT8U PCF8563_Set_Timer(INT8U cmd, INT8U cnt);
+
 /*********************************************************************************************************
 ** Function name:       PCF8563_INT_State
 ** Descriptions:        设置中断或读取中断状态
@@ -279,28 +210,15 @@ INT8U PCF8563_Set_Timer(INT8U cmd, INT8U cnt)
 ** Output parameters:   返回中断状态
 ** Returned value:      NONE
 *********************************************************************************************************/
-INT8U PCF8563_INT_State(INT8U cmd)
-{
-   INT8U temp,INTstate;
-   temp = 0;
+extern INT8U PCF8563_INT_State(INT8U cmd);
+extern uint8_t PCF8563_INT_Count;
 
-   if ((cmd&SetINT) == SetINT){
-      temp = (cmd&0x1f);
-      I2C_WriteNByte(PCF8563ADR, 1, 0x01, &temp, 1);
-      I2C_ReadNByte(PCF8563ADR, 1, 0x01, &temp, 1);
-      return (temp&0x1f);
-   }
-   else if ((cmd&0x40) == ClearINT){
-      I2C_ReadNByte(PCF8563ADR, 1, 0x01, &temp, 1);
-      INTstate = (temp&0x1f);
-      temp &= 0x13;
-      I2C_WriteNByte(PCF8563ADR, 1, 0x01, &temp, 1);
-      return INTstate;
-   }
-   return FALSE;
-}
+void PCF8563_INT_GPIO_Init(void);
+void PCF8563_INT_Enable(void);
+void PCF8563_INT_Disable(void);
+
+#endif
 
 /*********************************************************************************************************
-** End Of File
+  END FILE
 *********************************************************************************************************/
-

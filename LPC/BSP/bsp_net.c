@@ -42,12 +42,13 @@ static void SPI2_CS_Deselect(void)
 //关中断
 static void SPI_CrisEnter(void)
 {
-	__disable_irq();
+	__set_PRIMASK(1);//关中断
 }
 //开中断
 static void SPI_CrisExit(void)
 {
-	__enable_irq();
+	__set_PRIMASK(0);//开中断
+	
 }
 //写一个字节
 static void SPI2_WriteByte(uint8_t TxData)
@@ -132,6 +133,34 @@ void W5500_UDP_SocketCreat(uint8_t sn, uint16_t port)
 		socket(sn, Sn_MR_UDP, port, 0x00);
 	}
 }
+//UDP发送数据
+int32_t W5500_UDP_Send(uint8_t sn,uint8_t* data,uint8_t len)
+{
+	int32_t  ret;
+	uint8_t  destip[4];
+	uint16_t destport;
+	
+	if(getSn_SR(sn)==SOCK_UDP)
+	{
+		ret = sendto(sn, data, len, destip, destport);
+		if(ret < 0)
+		{
+			return ret;
+		}
+	}
+	else 
+	{
+		return -1;
+	}
+	
+	return 1;
+}
+//UD接收数据
+int32_t W5500_UDP_Rev(uint8_t sn,uint8_t* data,uint8_t len)
+{
+	
+}
+
 //UDP连接数据回环测试
 int32_t W5500_UDP_LoopBack(uint8_t sn, uint16_t port)
 {

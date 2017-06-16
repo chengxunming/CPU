@@ -13,5 +13,7 @@ void W5500_Config(void);
 void W5500_UDP_SocketCreat(uint8_t sn, uint16_t port);
 int32_t W5500_UDP_LoopBack(uint8_t sn, uint16_t port);
 
+int32_t W5500_UDP_Send(uint8_t sn,uint8_t* data,uint8_t len);
+
 #endif
 
