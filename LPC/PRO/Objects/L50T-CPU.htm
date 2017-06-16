@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\L50T-CPU.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\L50T-CPU.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060422: Last Updated: Fri Jun 16 15:52:28 2017
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060422: Last Updated: Fri Jun 16 16:27:20 2017
 <BR><P>
 <H3>Maximum Stack Usage =         48 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -436,11 +436,11 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__rt_exit_exit
 </UL>
 
-<P><STRONG><a name="[56]"></a>CAN1_RxMessage_Deal</STRONG> (Thumb, 26 bytes, Stack size 0 bytes, bsp.o(i.CAN1_RxMessage_Deal))
+<P><STRONG><a name="[56]"></a>CAN1_RxMessage_Deal</STRONG> (Thumb, 54 bytes, Stack size 0 bytes, bsp.o(i.CAN1_RxMessage_Deal))
 <BR><BR>[Called By]<UL><LI><a href="#[50]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Receive_CAN_DataFrame
 </UL>
 
-<P><STRONG><a name="[55]"></a>CAN2_RxMessage_Deal</STRONG> (Thumb, 26 bytes, Stack size 0 bytes, bsp.o(i.CAN2_RxMessage_Deal))
+<P><STRONG><a name="[55]"></a>CAN2_RxMessage_Deal</STRONG> (Thumb, 54 bytes, Stack size 0 bytes, bsp.o(i.CAN2_RxMessage_Deal))
 <BR><BR>[Called By]<UL><LI><a href="#[51]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Receive_CAN2_DataFrame
 </UL>
 
@@ -492,7 +492,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[2b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CAN_IRQHandler
 </UL>
 
-<P><STRONG><a name="[51]"></a>Receive_CAN2_DataFrame</STRONG> (Thumb, 50 bytes, Stack size 16 bytes, lpc1700can.o(i.Receive_CAN2_DataFrame))
+<P><STRONG><a name="[51]"></a>Receive_CAN2_DataFrame</STRONG> (Thumb, 62 bytes, Stack size 16 bytes, lpc1700can.o(i.Receive_CAN2_DataFrame))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = Receive_CAN2_DataFrame &rArr; DataCheckSum
 </UL>
 <BR>[Calls]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DataCheckSum
@@ -501,7 +501,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[2b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;CAN_IRQHandler
 </UL>
 
-<P><STRONG><a name="[50]"></a>Receive_CAN_DataFrame</STRONG> (Thumb, 50 bytes, Stack size 16 bytes, lpc1700can.o(i.Receive_CAN_DataFrame))
+<P><STRONG><a name="[50]"></a>Receive_CAN_DataFrame</STRONG> (Thumb, 62 bytes, Stack size 16 bytes, lpc1700can.o(i.Receive_CAN_DataFrame))
 <BR><BR>[Stack]<UL><LI>Max Depth = 24<LI>Call Chain = Receive_CAN_DataFrame &rArr; DataCheckSum
 </UL>
 <BR>[Calls]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;DataCheckSum

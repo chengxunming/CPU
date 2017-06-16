@@ -65,6 +65,12 @@ void CAN1_RxMessage_Deal(Frame_DefType * FrameRx)
 			}
 			else ev_CanRespone=CAN_EV_ResFail;
 			break;
+		case FUN_RESULT:
+			
+			break;
+		case FUN_END:
+			
+			break;
 		default:
 			ev_CanRespone=CAN_EV_ResFail;
 			break;
@@ -80,6 +86,12 @@ void CAN2_RxMessage_Deal(Frame_DefType * FrameRx)
 				Flag_CAN2_Respone=true;
 			}
 			else ev_CanRespone=CAN_EV_ResFail;
+			break;
+		case FUN_RESULT:
+			
+			break;
+		case FUN_END:
+			
 			break;
 		default:
 			ev_CanRespone=CAN_EV_ResFail;
