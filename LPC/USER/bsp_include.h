@@ -18,6 +18,9 @@
 
 #include "bsp_net.h"
 #include "bsp_pcf8563.h"
+#include "bsp_rs485.h"
+#include "bsp_rs232.h"
+#include "bsp_led.h"
 
 
 //CAN通信测试状态
@@ -29,7 +32,7 @@ typedef enum
 	CAN_EV_ResTimeOut,
 	CAN_EV_ResReady,
 }CAN_EV_TYPE;
-//CAN通信测试状态
+//网络通信测试状态
 typedef enum  
 {
 	NET_EV_None=0,
@@ -38,19 +41,16 @@ typedef enum
 	NET_EV_ResTimeOut,
 	NET_EV_ResReady,
 }NET_EV_TYPE;
-//单板类型定义
+//RS232通信测试状态
 typedef enum  
 {
-	MD_NONE=0,
-	MD_CPU=1,
-	MD_COU=2,
-	MD_SSU=3,
-	MD_PDU=4,
-	MD_DET=5,
-	MD_IOU=6,
-	MD_MAU=7,
-	MD_MFU=8
-}MODULE_TYPE;
+	RS232_EV_None=0,
+	RS232_EV_ResOk,
+	RS232_EV_ResFail,
+	RS232_EV_ResTimeOut,
+	RS232_EV_ResReady,
+}RS232_EV_TYPE;
+
 //通信帧功能码定义
 typedef enum  
 {
@@ -62,7 +62,6 @@ typedef enum
 typedef enum  
 {
 	CIRCUIT_CAN=1,
-	CIRCUIT_CAN2,
 	CIRCUIT_W5500,
 	CIRCUIT_RS232,
 	CIRCUIT_RS485,
@@ -87,9 +86,11 @@ extern uint8_t canUartData[256];
 extern uint8_t candataLen;
 extern CAN_EV_TYPE ev_CanRespone;
 extern NET_EV_TYPE ev_NetRespone;
+extern RS232_EV_TYPE ev_RS232Respone;
 
 extern uint8_t Time_CanRespone_Count;
-extern uint8_t Time_NetRespone_Count;
+extern uint32_t Time_NetRespone_Count;
+extern uint32_t Time_RS232Respone_Count;
 
 extern bool Flag_PCF8563_OK;
 

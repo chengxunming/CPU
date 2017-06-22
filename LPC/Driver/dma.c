@@ -8,7 +8,9 @@
 **
 *********************************************************************************************************/
 
-#include "../User_code/global.h"
+#include "dma.h"
+#include "uart.h"
+#include "type.h"
 
 volatile uint32_t DMATCCount  = 0;                                      /* 终端计数中断发生次数         */
 volatile uint32_t DMAErrCount = 0;                                      /* DMA错误中断发生次数          */

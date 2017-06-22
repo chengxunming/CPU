@@ -26,6 +26,10 @@
 #ifndef __UART_H 
 #define __UART_H
 
+#include "lpc177x_8x.h"
+#include <stdio.h>
+#include <stdint.h>
+
 #define MODEM_TEST    0
 
 #define IER_RBR     0x01
@@ -47,7 +51,7 @@
 #define LSR_TEMT    0x40
 #define LSR_RXFE    0x80
 
-#define BUFSIZE     12
+#define BUFSIZE     15
 
 
 extern volatile uint8_t UART0TxEmpty, UART1TxEmpty;
@@ -55,6 +59,8 @@ extern volatile uint8_t UART2TxEmpty, UART3TxEmpty;
 extern volatile uint8_t UART4TxEmpty;
 
 extern uint8_t UART0Buffer[512],UART1Buffer[128],UART2Buffer[16], UART3Buffer[16], UART4Buffer[16];
+extern volatile uint32_t UART0Count, UART1Count;
+extern volatile uint32_t UART2Count,UART3Count,UART4Count;
 
 
 /*********************************************************************************************************

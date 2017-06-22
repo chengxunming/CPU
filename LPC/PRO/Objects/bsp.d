@@ -19,3 +19,8 @@
 .\objects\bsp.o: ..\BSP\bsp_net.h
 .\objects\bsp.o: ..\Driver\ssp.h
 .\objects\bsp.o: ..\BSP\bsp_pcf8563.h
+.\objects\bsp.o: ..\BSP\bsp_rs485.h
+.\objects\bsp.o: ..\Driver\uart.h
+.\objects\bsp.o: ..\BSP\bsp_rs232.h
+.\objects\bsp.o: ..\USER\bsp_include.h
+.\objects\bsp.o: ..\BSP\bsp_led.h

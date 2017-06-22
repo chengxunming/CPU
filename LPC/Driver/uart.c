@@ -14,7 +14,10 @@
 **
 ** Rechecked by:
 *********************************************************************************************************/
-#include "../User_code/global.h"
+#include "uart.h"
+#include "type.h"
+#include "dma.h"
+#include "bsp_rs232.h"
 
 volatile uint32_t UART0Status, UART1Status;
 volatile uint32_t UART2Status, UART3Status;
@@ -30,8 +33,7 @@ volatile uint8_t UART4TxEmpty = 1;
 
 uint8_t UART0Buffer[512], UART1Buffer[128];
 uint8_t UART2Buffer[16], UART3Buffer[16],UART4Buffer[16];
-uint8_t GPS_Data_ok=0;
-static uint8_t Gpstime_err,Gps_date_ok;                     //GPS时间错误及GPS取时成功标识
+
 
 typedef struct tag_gps_data
 {
@@ -64,56 +66,7 @@ uint8_t GPS_Frame_Buf[100];
 *******************************************************************************/
 void get_gps_useful_data(void)
 { 
-     char *p_frame_start = NULL;
-     char *p_useful_frame_start = NULL;
-     int16_t rcv_buf_data_len = 0;
-     int16_t index = 0;
-     int16_t frame_start_point = 0;
-    
-     rcv_buf_data_len = Bufd.rpos;
-     p_frame_start = &Bufd.recv[0];
-        
-    /* data example:
-            $GPVTG,,,,,,,,,N*30 
-            $GPRMC,132234.00,V,,,,,,,120116,,,N*7D 
-            $GPRMC,133735.00,A,3949.63893,N,11616.48419,E,0.296,,120116,,,A*79
-    */    
-     for(index = 0; index < rcv_buf_data_len; )
-     {     
-         p_frame_start=strstr(Bufd.recv + index, "$GPRMC,"); //1. find start, "$GPRMC,"
-         //$GPRMC,132234.00,V,,,,,,,120116,,,N*7D $GPRMC,133735.00,A,3949.63893,N,11616.48419,E,0.296,,120116,,,A*79
-         if(p_frame_start) 
-         {
-              index = p_frame_start-Bufd.recv;
-              if(index>0)
-                {
-                    memset(Bufd.recv, 0 , index);
-                }
 
-              index = index + 7;
-              p_useful_frame_start = strstr(Bufd.recv + index, ",A,");//2 find useful data, ",A,"
-              frame_start_point = p_useful_frame_start - p_frame_start;
-              if((frame_start_point > 20)||(frame_start_point <= 0))//not find useful data
-                {
-                  GPS_Data_ok = 0;
-									Gps.active	=0;  
-									continue;
-										
-                }
-                GPS_Data_ok = 1;
-								Gps.active	=1;
-
-                memset(GPS_Frame_Buf, 0, GPS_Frame_Buf_Size);
-                memcpy(GPS_Frame_Buf, Bufd.recv + index-7 , 100);
-								
-            }
-            else
-            {
-               break;
-            } 
-        }
-        memset(Bufd.recv, 0, sizeof(Bufd.recv));
-		Bufd.rpos=0;
 }
 
 /*********************************************************************************************************
@@ -141,7 +94,7 @@ void UART0_IRQHandler (void)
 			{
 				do
 				{
-					Bufd.recv[Bufd.rpos++]	=LPC_UART0->RBR;
+					UART0Buffer[UART0Count++]	=LPC_UART0->RBR;
 				}
 				while((LPC_UART0->LSR & 0x01)==0x01);				//判断数据就绪位
 				
@@ -156,179 +109,15 @@ void UART0_IRQHandler (void)
 			
 		case IIR_CTI:													//接收超时中断
 			
-			//LED_POWER=!LED_POWER;
 			if((LPC_UART0->LSR & 0x0E)==0)							//判断是否有OE、PE、FE底层位传输错误
 			{
 				do
 				{
-					Bufd.recv[Bufd.rpos++]	=LPC_UART0->RBR;
+					UART0Buffer[UART0Count++]	=LPC_UART0->RBR;
 				}
 				while ((LPC_UART0->LSR & 0x01)==0x01);				//判断数据就绪位
 				
-				get_gps_useful_data();
-				
-				if(GPS_Data_ok)							//GPS数据已有效
-				{
-					Bufd.rpos	=0;                                 //缓冲区指针复位
-
-					signed char hourtemp;
-
-					Gps.hour	=(GPS_Frame_Buf[7]-0x30)*10+GPS_Frame_Buf[8]-0x30;
-					Gps.minute	=(GPS_Frame_Buf[9]-0x30)*10+GPS_Frame_Buf[10]-0x30;
-					Gps.second	=(GPS_Frame_Buf[11]-0x30)*10+GPS_Frame_Buf[12]-0x30;
-
-					for (uint16_t i=100;i>20;i--)
-					{
-						if ((GPS_Frame_Buf[i]==',')&&(GPS_Frame_Buf[i-1]==',')&&(GPS_Frame_Buf[i-2]!=',')&&(GPS_Frame_Buf[i-8]==','))
-						{
-							Gps.date	=(GPS_Frame_Buf[i-7]-0x30)*10+GPS_Frame_Buf[i-6]-0x30;
-							Gps.month	=(GPS_Frame_Buf[i-5]-0x30)*10+GPS_Frame_Buf[i-4]-0x30;
-							Gps.year	=(GPS_Frame_Buf[i-3]-0x30)*10+GPS_Frame_Buf[i-2]-0x30;
-
-							Gps_date_ok=1;
-
-							break;
-						}
-						else
-							Gps_date_ok=0;
-
-					}
-					hourtemp = Gps.hour;
-					hourtemp = hourtemp+TIMEDIFF;
-
-					Gps.hour	=((uint8_t)(24+Gps.hour+TIMEDIFF))%24;
-
-					if (hourtemp>23)
-					{
-						uint8_t yeartemp,max_day;
-						uint16_t i,j;
-
-						i=Gps.year+2000;
-						j=Gps.month;
-
-
-						if ((i%400==0)|((i%4==0)&&(i%100!=0)))
-						{
-							yeartemp=1;
-						}
-						if (j==2)
-						{
-							if (yeartemp)
-								max_day=29;
-							else
-								max_day=28;
-						}
-						else if ((j==1)|(j==3)|(j==5)|(j==7)|(j==8)|(j==10)|(j==12))
-						{
-							max_day=31;
-						}
-						else
-						{
-							max_day=30;
-						}
-
-						Gps.date=Gps.date+1;
-
-						if (Gps.date>max_day)
-						{
-							Gps.date=1;
-							Gps.month=Gps.month+1;
-							if (Gps.month>12)
-							{
-								Gps.month=1;
-								Gps.year=Gps.year+1;
-							}
-						}
-					}
-					else if (hourtemp<0)
-					{
-						uint8_t yeartemp,max_day;
-						uint16_t i,j;
-
-						i=Gps.year+2000;
-						j=Gps.month;
-
-
-						if ((i%400==0)|((i%4==0)&&(i%100!=0)))
-						{
-							yeartemp=1;
-						}
-						if (j==2)
-						{
-							if (yeartemp)
-								max_day=29;
-							else
-								max_day=28;
-						}
-						else if ((j==1)|(j==3)|(j==5)|(j==7)|(j==8)|(j==10)|(j==12))
-						{
-							max_day=31;
-						}
-						else
-						{
-							max_day=30;
-						}
-
-						Gps.date=Gps.date-1;
-
-						if (Gps.date==0)
-						{
-							Gps.date=max_day;
-							Gps.month=Gps.month-1;
-							if (Gps.month==0)
-							{
-								Gps.month=12;
-								Gps.year=Gps.year-1;
-							}
-						}
-					}
-
-
-					if ((Gps.second>59)||(Gps.minute>59)||(Gps.hour>23)||(Gps.date>31)||(Rtc.date==0)||(Gps.month>12)||(Gps.month==0)||(Gps.year>99))
-
-						Gpstime_err=1;
-					else
-						Gpstime_err=0;
-
-
-					GPS_Data_ok = 0;
-
-					if ((Gps.updaen)&&(Gpstime_err==0))								//如GPS更新使能
-					{
-						uint16_t y,m,d,w;
-
-						Rtc.hour	=Gps.hour;						//发送给暂存变量
-						Rtc.minute	=Gps.minute%60;
-						Rtc.second	=Gps.second%60;
-
-						if (Gps_date_ok)
-						{
-							Rtc.year	=Gps.year+2000;
-							Rtc.month	=Gps.month;
-							Rtc.date	=Gps.date;
-
-							y	=	Gps.year+2000;
-							m	=	Gps.month;
-							d	=	Gps.date;
-
-							if (m == 1 | m == 2)
-							{
-								m += 12;
-								y--;
-							}
-							//w = (d + 2 * m + 3 * (m + 1) / 5 + y + y / 4 -y / 100 +y / 400) % 7 + 1;  //基姆拉尔森计算公式
-							w = (d+2*m+3*(m+1)/5+y+y/4-y/100+y/400+1)%7;
-
-							Rtc.week = w;
-						}
-
-
-						Gps.wrtlog	=1;								//GPS更新时钟并写日志
-
-						GPS_update_off();							//更新完后关闭使能
-
-					}
-				}	
+				get_UAET0_useful_data(UART0Buffer,UART0Count);	
 
 			}
 			else
@@ -381,74 +170,28 @@ void UART1_IRQHandler (void)
 			{
 				do
 				{
-					Netrev.buf[Netrev.pos++]	=LPC_UART1->RBR;
-					
-					if((ConfigDownLoadStartFlg)&&(Netrev.pos==NET_REV_MAXNUM))		//如果是配置下载传输
-					{
-						memset(&Netrev,0,sizeof(NETRECV));				//复位Netrev结构体，方便中断再次接收(Netrev.ok=0)
-						
-						do{uiDummy=LPC_UART1->RBR;}while((LPC_UART1->LSR & 0x01)==0x01);	//清除多余数据
-						
-						return;
-					}	
-					else if((!ConfigDownLoadStartFlg)&&(Netrev.pos==NET_REV_NUM))
-					{
-						memset(&Netrev,0,sizeof(NETRECV));				//复位Netrev结构体，方便中断再次接收(Netrev.ok=0)
-						
-						do{uiDummy=LPC_UART1->RBR;}while((LPC_UART1->LSR & 0x01)==0x01);	//清除多余数据
-						
-						return;
-					}
+					UART1Buffer[UART1Count++]	=LPC_UART1->RBR;
 				}
 				while((LPC_UART1->LSR & 0x01)==0x01);				//判断数据就绪位
-				
-				if	((Netrev.buf[Netrev.pos-1]==0x7E)&&
-					(Netrev.buf[Netrev.pos-2]==0xE7))					//如果触发级收到的最后一个字节是帧尾，则缓冲区完成标志置1
-					Netrev.ok	=1;
-				else
-					Netrev.ok	=0;										//否则置0，即使之前已经存在有效帧
 			}
 			else
 			{
 				uiDummy=LPC_UART1->LSR;									//清除错误指示
 				do{uiDummy=LPC_UART1->RBR;}while((LPC_UART1->LSR & 0x01)==0x01);	//清除多余数据
 			}
-			
 			break;
 			
 		case IIR_CTI:													//接收超时中断
 			
-			//LED_POWER=!LED_POWER;
 			if((LPC_UART1->LSR & 0x0E)==0)							//判断是否有OE、PE、FE底层位传输错误
 			{
 				do
 				{
-					Netrev.buf[Netrev.pos++]	=LPC_UART1->RBR;			//RBR接收至接收缓冲区	
-					//Netrev.pos=Netrev.pos+1;
-					
-					if((ConfigDownLoadStartFlg)&&(Netrev.pos==NET_REV_MAXNUM))		//如果是配置下载传输
-					{
-						memset(&Netrev,0,sizeof(NETRECV));				//复位Netrev结构体，方便中断再次接收(Netrev.ok=0)
-						do{uiDummy=LPC_UART1->RBR;}while((LPC_UART1->LSR & 0x01)==0x01);	//清除多余数据
-						return;
-					}	
-					else if((!ConfigDownLoadStartFlg)&&(Netrev.pos==NET_REV_NUM))
-					{
-						memset(&Netrev,0,sizeof(NETRECV));				//复位Netrev结构体，方便中断再次接收(Netrev.ok=0)
-						do{uiDummy=LPC_UART1->RBR;}while((LPC_UART1->LSR & 0x01)==0x01);	//清除多余数据
-						return;
-					}
+					UART1Buffer[UART1Count++]	=LPC_UART1->RBR;			//RBR接收至接收缓冲区	
 				}
 				while((LPC_UART1->LSR & 0x01)==0x01);			//判断数据就绪位
 				
-				if	((Netrev.buf[Netrev.pos-1]==0x7E)&&
-					(Netrev.buf[Netrev.pos-2]==0xE7))					//如果触发级收到的最后一个字节是帧尾，则缓冲区完成标志置1
-					Netrev.ok	=1;
-				else
-				{
-					memset(&Netrev,0,sizeof(NETRECV));
-					Netrev.ok	=0;										//否则置0，即使之前已经存在有效帧
-				}
+				get_UAET1_useful_data(UART1Buffer,UART1Count);
 			}
 			else
 			{

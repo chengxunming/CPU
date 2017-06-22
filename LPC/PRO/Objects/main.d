@@ -18,3 +18,10 @@
 .\objects\main.o: ..\BSP\bsp_net.h
 .\objects\main.o: ..\Driver\ssp.h
 .\objects\main.o: ..\BSP\bsp_pcf8563.h
+.\objects\main.o: ..\BSP\bsp_rs485.h
+.\objects\main.o: ..\Driver\uart.h
+.\objects\main.o: ..\BSP\bsp_rs232.h
+.\objects\main.o: ..\USER\bsp_include.h
+.\objects\main.o: ..\BSP\bsp_led.h
+.\objects\main.o: ..\BSP\bsp.h
+.\objects\main.o: ..\Driver\I2CINT.h

@@ -22,3 +22,8 @@
 .\objects\bsp_net.o: ..\Driver\LPC1700CAN.h
 .\objects\bsp_net.o: ..\USER\type.h
 .\objects\bsp_net.o: ..\BSP\bsp_pcf8563.h
+.\objects\bsp_net.o: ..\BSP\bsp_rs485.h
+.\objects\bsp_net.o: ..\Driver\uart.h
+.\objects\bsp_net.o: ..\BSP\bsp_rs232.h
+.\objects\bsp_net.o: ..\USER\bsp_include.h
+.\objects\bsp_net.o: ..\BSP\bsp_led.h

@@ -219,13 +219,17 @@ CANAPP_GLOBAL unsigned char writedetail(unsigned char LEN,unsigned char FF,
 *********************************************************************************************************/
 CANAPP_GLOBAL unsigned char CANSend(unsigned char Ch, unsigned char BUFNum);
 
-
+//¹ýÂËÆ÷
+void CAN_wrFilter (uint32_t ctrl, uint32_t id, uint8_t format);
 
 /** CAN peripheral ID 0 */
 #define CAN_1		0
 
 /** CAN peripheral ID 1 */
 #define CAN_2		1
+
+#define STANDARD_FORMAT  0
+#define EXTENDED_FORMAT  1
 
 typedef enum
 {

@@ -19,3 +19,8 @@
 .\objects\lpc1700can.o: ..\BSP\bsp_net.h
 .\objects\lpc1700can.o: ..\Driver\ssp.h
 .\objects\lpc1700can.o: ..\BSP\bsp_pcf8563.h
+.\objects\lpc1700can.o: ..\BSP\bsp_rs485.h
+.\objects\lpc1700can.o: ..\Driver\uart.h
+.\objects\lpc1700can.o: ..\BSP\bsp_rs232.h
+.\objects\lpc1700can.o: ..\USER\bsp_include.h
+.\objects\lpc1700can.o: ..\BSP\bsp_led.h

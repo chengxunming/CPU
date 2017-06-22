@@ -5,15 +5,15 @@
 * @brief	CMSIS Cortex-M3 Device Peripheral Access Layer Source File
 *          	for the NXP LPC177x_8x Device Series
 *
-*			ARM Limited (ARM) is supplying this software for use with
-*			Cortex-M processor based microcontrollers.  This file can be
-*			freely distributed within development tools that are supporting
+*			ARM Limited (ARM) is supplying this software for use with 
+*			Cortex-M processor based microcontrollers.  This file can be 
+*			freely distributed within development tools that are supporting 
 *			such ARM based processors.
 *
 * @version	1.0
 * @date		02. June. 2011
 * @author	NXP MCU SW Application Team
-*
+* 
 * Copyright(C) 2011, NXP Semiconductor
 * All rights reserved.
 *
@@ -200,8 +200,6 @@
 #define PCONP_Val             0x042887DE
 #define CLKOUTCFG_Val         0x00000100
 
-#define VECT_TAB_OFFSET       0x6000
-
 
 /*--------------------- Flash Accelerator Configuration ----------------------
 //
@@ -226,48 +224,48 @@
 
 /* Clock Configuration -------------------------------------------------------*/
 #if (CHECK_RSVD((SCS_Val),       ~0x0000003F))
-#error "SCS: Invalid values of reserved bits!"
+   #error "SCS: Invalid values of reserved bits!"
 #endif
 
 #if (CHECK_RANGE((CLKSRCSEL_Val), 0, 1))
-#error "CLKSRCSEL: Value out of range!"
+   #error "CLKSRCSEL: Value out of range!"
 #endif
 
 #if (CHECK_RSVD((PLL0CFG_Val),   ~0x0000007F))
-#error "PLL0CFG: Invalid values of reserved bits!"
+   #error "PLL0CFG: Invalid values of reserved bits!"
 #endif
 
 #if (CHECK_RSVD((PLL1CFG_Val),   ~0x0000007F))
-#error "PLL1CFG: Invalid values of reserved bits!"
+   #error "PLL1CFG: Invalid values of reserved bits!"
 #endif
 
 #if (CHECK_RSVD((CCLKSEL_Val),   ~0x0000011F))
-#error "CCLKSEL: Invalid values of reserved bits!"
+   #error "CCLKSEL: Invalid values of reserved bits!"
 #endif
 
 #if (CHECK_RSVD((USBCLKSEL_Val), ~0x0000031F))
-#error "USBCLKSEL: Invalid values of reserved bits!"
+   #error "USBCLKSEL: Invalid values of reserved bits!"
 #endif
 
 #if (CHECK_RSVD((EMCCLKSEL_Val), ~0x00000001))
-#error "EMCCLKSEL: Invalid values of reserved bits!"
+   #error "EMCCLKSEL: Invalid values of reserved bits!"
 #endif
 
 #if (CHECK_RSVD((PCLKSEL_Val), ~0x0000001F))
-#error "PCLKSEL: Invalid values of reserved bits!"
+   #error "PCLKSEL: Invalid values of reserved bits!"
 #endif
 
 #if (CHECK_RSVD((PCONP_Val), ~0xFFFEFFFF))
-#error "PCONP: Invalid values of reserved bits!"
+   #error "PCONP: Invalid values of reserved bits!"
 #endif
 
 #if (CHECK_RSVD((CLKOUTCFG_Val), ~0x000001FF))
-#error "CLKOUTCFG: Invalid values of reserved bits!"
+   #error "CLKOUTCFG: Invalid values of reserved bits!"
 #endif
 
 /* Flash Accelerator Configuration -------------------------------------------*/
 #if (CHECK_RSVD((FLASHCFG_Val), ~0x0000F000))
-#warning "FLASHCFG: Invalid values of reserved bits!"
+   #warning "FLASHCFG: Invalid values of reserved bits!"
 #endif
 
 
@@ -285,40 +283,40 @@
 /* Determine core clock frequency according to settings */
 #if (CLOCK_SETUP)                       /* Clock Setup                        */
 
-#if ((CLKSRCSEL_Val & 0x01) == 1) && ((SCS_Val & 0x20)== 0)
-#error "Main Oscillator is selected as clock source but is not enabled!"
-#endif
+  #if ((CLKSRCSEL_Val & 0x01) == 1) && ((SCS_Val & 0x20)== 0)
+   #error "Main Oscillator is selected as clock source but is not enabled!"
+  #endif
 
-#if ((CCLKSEL_Val & 0x100) == 0x100) && (PLL0_SETUP == 0)
-#error "Main PLL is selected as clock source but is not enabled!"
-#endif
+  #if ((CCLKSEL_Val & 0x100) == 0x100) && (PLL0_SETUP == 0)
+   #error "Main PLL is selected as clock source but is not enabled!"
+  #endif
 
-#if ((CCLKSEL_Val & 0x100) == 0)      /* cclk = sysclk */
-#if ((CLKSRCSEL_Val & 0x01) == 0)   /* sysclk = irc_clk */
-#define __CORE_CLK (IRC_OSC / __CCLK_DIV)
-#define __PER_CLK  (IRC_OSC/  __PCLK_DIV)
-#define __EMC_CLK  (IRC_OSC/  __ECLK_DIV)
-#else                               /* sysclk = osc_clk */
-#define __CORE_CLK (OSC_CLK / __CCLK_DIV)
-#define __PER_CLK  (OSC_CLK/  __PCLK_DIV)
-#define __EMC_CLK  (OSC_CLK/  __ECLK_DIV)
-#endif
-#else                                 /* cclk = pll_clk */
-#if ((CLKSRCSEL_Val & 0x01) == 0)   /* sysclk = irc_clk */
-#define __CORE_CLK (__PLL0_CLK(IRC_OSC) / __CCLK_DIV)
-#define __PER_CLK  (__PLL0_CLK(IRC_OSC) / __PCLK_DIV)
-#define __EMC_CLK  (__PLL0_CLK(IRC_OSC) / __ECLK_DIV)
-#else                               /* sysclk = osc_clk */
-#define __CORE_CLK (__PLL0_CLK(OSC_CLK) / __CCLK_DIV)
-#define __PER_CLK  (__PLL0_CLK(OSC_CLK) / __PCLK_DIV)
-#define __EMC_CLK  (__PLL0_CLK(OSC_CLK) / __ECLK_DIV)
-#endif
-#endif
+  #if ((CCLKSEL_Val & 0x100) == 0)      /* cclk = sysclk */
+    #if ((CLKSRCSEL_Val & 0x01) == 0)   /* sysclk = irc_clk */
+        #define __CORE_CLK (IRC_OSC / __CCLK_DIV)
+		#define __PER_CLK  (IRC_OSC/  __PCLK_DIV)
+        #define __EMC_CLK  (IRC_OSC/  __ECLK_DIV)
+    #else                               /* sysclk = osc_clk */
+        #define __CORE_CLK (OSC_CLK / __CCLK_DIV)
+        #define __PER_CLK  (OSC_CLK/  __PCLK_DIV)
+        #define __EMC_CLK  (OSC_CLK/  __ECLK_DIV)
+    #endif
+  #else                                 /* cclk = pll_clk */
+    #if ((CLKSRCSEL_Val & 0x01) == 0)   /* sysclk = irc_clk */
+        #define __CORE_CLK (__PLL0_CLK(IRC_OSC) / __CCLK_DIV)
+        #define __PER_CLK  (__PLL0_CLK(IRC_OSC) / __PCLK_DIV)
+        #define __EMC_CLK  (__PLL0_CLK(IRC_OSC) / __ECLK_DIV)
+    #else                               /* sysclk = osc_clk */
+        #define __CORE_CLK (__PLL0_CLK(OSC_CLK) / __CCLK_DIV)
+        #define __PER_CLK  (__PLL0_CLK(OSC_CLK) / __PCLK_DIV)
+		#define __EMC_CLK  (__PLL0_CLK(OSC_CLK) / __ECLK_DIV)
+    #endif
+  #endif
 
 #else
-#define __CORE_CLK (IRC_OSC)
-#define __PER_CLK  (IRC_OSC)
-#define __EMC_CLK  (IRC_OSC)
+        #define __CORE_CLK (IRC_OSC)
+        #define __PER_CLK  (IRC_OSC)
+        #define __EMC_CLK  (IRC_OSC)
 #endif
 
 /*----------------------------------------------------------------------------
@@ -336,95 +334,83 @@ uint32_t USBClock 		 = (48000000UL);		  /*!< USB Clock Frequency - this value wi
  *----------------------------------------------------------------------------*/
 void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
 {
-	/* Determine clock frequency according to clock register values             */
-	if ((LPC_SC->CCLKSEL &0x100) == 0)
-	{            /* cclk = sysclk    */
-		if ((LPC_SC->CLKSRCSEL & 0x01) == 0)
-		{    /* sysclk = irc_clk */
-			SystemCoreClock = (IRC_OSC / (LPC_SC->CCLKSEL & 0x1F));
-			PeripheralClock = (IRC_OSC / (LPC_SC->PCLKSEL & 0x1F));
-			EMCClock        = (IRC_OSC / ((LPC_SC->EMCCLKSEL & 0x01)+1));
-		}
-		else 
-		{                                        /* sysclk = osc_clk */
-			if ((LPC_SC->SCS & 0x40) == 0)
-			{
-				SystemCoreClock = 0;                      /* this should never happen! */
-				PeripheralClock = 0;
-				EMCClock        = 0;
-			}
-			else 
-			{
-				SystemCoreClock = (OSC_CLK / (LPC_SC->CCLKSEL & 0x1F));
-				PeripheralClock = (OSC_CLK / (LPC_SC->PCLKSEL & 0x1F));
-				EMCClock        = (OSC_CLK / ((LPC_SC->EMCCLKSEL & 0x01)+1));
-			}
-		}
-	}
-	else 
-	{                                          /* cclk = pll_clk */
-		if ((LPC_SC->PLL0STAT & 0x100) == 0) 
-		{        /* PLL0 not enabled */
-			SystemCoreClock = 0;                      /* this should never happen! */
-			PeripheralClock = 0;
-			EMCClock 		  = 0;
-		}
-		else 
-		{
-			if ((LPC_SC->CLKSRCSEL & 0x01) == 0) 
-			{    /* sysclk = irc_clk */
-				SystemCoreClock = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->CCLKSEL & 0x1F));
-				PeripheralClock = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->PCLKSEL & 0x1F));
-				EMCClock        = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1) / ((LPC_SC->EMCCLKSEL & 0x01)+1));
-			}
-			else 
-			{                                        /* sysclk = osc_clk */
-				if ((LPC_SC->SCS & 0x40) == 0) 
-				{
-					SystemCoreClock = 0;                      /* this should never happen! */
-					PeripheralClock = 0;
-					EMCClock 		  = 0;
-				}
-				else 
-				{
-					SystemCoreClock = (OSC_CLK * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->CCLKSEL & 0x1F));
-					PeripheralClock = (OSC_CLK * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->PCLKSEL & 0x1F));
-					EMCClock        = (OSC_CLK * ((LPC_SC->PLL0STAT & 0x1F) + 1) / ((LPC_SC->EMCCLKSEL & 0x01)+1));
-				}
-			}
-		}
-	}
-	/* ---update USBClock------------------*/
-	if (LPC_SC->USBCLKSEL & (0x01<<8))//Use PLL0 as the input to the USB clock divider
-	{
-		switch (LPC_SC->USBCLKSEL & 0x1F)
-		{
-		case 0:
-			USBClock = 0; //no clock will be provided to the USB subsystem
-			break;
-		case 4:
-		case 6:
-			if (LPC_SC->CLKSRCSEL & 0x01)	//pll_clk_in = main_osc
-				USBClock = (OSC_CLK * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->USBCLKSEL & 0x1F));
-			else //pll_clk_in = irc_clk
-				USBClock = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->USBCLKSEL & 0x1F));
-			break;
-		default:
-			USBClock = 0;  /* this should never happen! */
-		}
-	}
-	else if (LPC_SC->USBCLKSEL & (0x02<<8))//usb_input_clk = alt_pll (pll1)
-	{
-		if (LPC_SC->CLKSRCSEL & 0x01)	//pll1_clk_in = main_osc
-			USBClock = (OSC_CLK * ((LPC_SC->PLL1STAT & 0x1F) + 1));
-		else //pll1_clk_in = irc_clk
-			USBClock = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1));
-	}
-	else
-		USBClock = 0; /* this should never happen! */
+  /* Determine clock frequency according to clock register values             */
+  if ((LPC_SC->CCLKSEL &0x100) == 0) {            /* cclk = sysclk    */
+    if ((LPC_SC->CLKSRCSEL & 0x01) == 0) {    /* sysclk = irc_clk */
+          SystemCoreClock = (IRC_OSC / (LPC_SC->CCLKSEL & 0x1F));
+          PeripheralClock = (IRC_OSC / (LPC_SC->PCLKSEL & 0x1F));
+          EMCClock        = (IRC_OSC / ((LPC_SC->EMCCLKSEL & 0x01)+1));
+    }
+    else {                                        /* sysclk = osc_clk */
+      if ((LPC_SC->SCS & 0x40) == 0) {
+          SystemCoreClock = 0;                      /* this should never happen! */
+          PeripheralClock = 0;
+          EMCClock        = 0;
+      }
+      else {
+          SystemCoreClock = (OSC_CLK / (LPC_SC->CCLKSEL & 0x1F));
+          PeripheralClock = (OSC_CLK / (LPC_SC->PCLKSEL & 0x1F));
+          EMCClock        = (OSC_CLK / ((LPC_SC->EMCCLKSEL & 0x01)+1));
+      }
+    }
+  }
+  else {                                          /* cclk = pll_clk */
+    if ((LPC_SC->PLL0STAT & 0x100) == 0) {        /* PLL0 not enabled */
+          SystemCoreClock = 0;                      /* this should never happen! */
+          PeripheralClock = 0;
+          EMCClock 		  = 0;
+    }
+    else {
+      if ((LPC_SC->CLKSRCSEL & 0x01) == 0) {    /* sysclk = irc_clk */
+          SystemCoreClock = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->CCLKSEL & 0x1F));
+          PeripheralClock = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->PCLKSEL & 0x1F));
+          EMCClock        = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1) / ((LPC_SC->EMCCLKSEL & 0x01)+1));
+      }
+      else {                                        /* sysclk = osc_clk */
+        if ((LPC_SC->SCS & 0x40) == 0) {
+          SystemCoreClock = 0;                      /* this should never happen! */
+          PeripheralClock = 0;
+          EMCClock 		  = 0;
+        }
+        else {
+          SystemCoreClock = (OSC_CLK * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->CCLKSEL & 0x1F));
+          PeripheralClock = (OSC_CLK * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->PCLKSEL & 0x1F));
+          EMCClock        = (OSC_CLK * ((LPC_SC->PLL0STAT & 0x1F) + 1) / ((LPC_SC->EMCCLKSEL & 0x01)+1));
+        }
+      }
+    }
+  }
+  /* ---update USBClock------------------*/
+  if(LPC_SC->USBCLKSEL & (0x01<<8))//Use PLL0 as the input to the USB clock divider
+  {
+	  switch (LPC_SC->USBCLKSEL & 0x1F)
+	  {
+	  case 0:
+		  USBClock = 0; //no clock will be provided to the USB subsystem
+		  break;
+	  case 4:
+	  case 6:
+		  if(LPC_SC->CLKSRCSEL & 0x01)	//pll_clk_in = main_osc
+			  USBClock = (OSC_CLK * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->USBCLKSEL & 0x1F));
+		  else //pll_clk_in = irc_clk
+			  USBClock = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1) / (LPC_SC->USBCLKSEL & 0x1F));
+		  break;
+	  default:
+		  USBClock = 0;  /* this should never happen! */
+	  }
+  }
+  else if(LPC_SC->USBCLKSEL & (0x02<<8))//usb_input_clk = alt_pll (pll1)
+  {
+	  if(LPC_SC->CLKSRCSEL & 0x01)	//pll1_clk_in = main_osc
+	  		USBClock = (OSC_CLK * ((LPC_SC->PLL1STAT & 0x1F) + 1));
+	  else //pll1_clk_in = irc_clk
+	  		USBClock = (IRC_OSC * ((LPC_SC->PLL0STAT & 0x1F) + 1));
+  }
+  else
+	  USBClock = 0; /* this should never happen! */
 }
 
-/* Determine clock frequency according to clock register values             */
+  /* Determine clock frequency according to clock register values             */
 
 /**
  * Initialize the system
@@ -438,46 +424,43 @@ void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
 void SystemInit (void)
 {
 #if (CLOCK_SETUP)                       /* Clock Setup                        */
-	LPC_SC->SCS       = SCS_Val;
-	if (SCS_Val & (1 << 5)) {             /* If Main Oscillator is enabled      */
-		while ((LPC_SC->SCS & (1<<6)) == 0);/* Wait for Oscillator to be ready    */
-	}
+  LPC_SC->SCS       = SCS_Val;
+  if (SCS_Val & (1 << 5)) {             /* If Main Oscillator is enabled      */
+    while ((LPC_SC->SCS & (1<<6)) == 0);/* Wait for Oscillator to be ready    */
+  }
 
-	LPC_SC->CLKSRCSEL = CLKSRCSEL_Val;    /* Select Clock Source for sysclk/PLL0*/
+  LPC_SC->CLKSRCSEL = CLKSRCSEL_Val;    /* Select Clock Source for sysclk/PLL0*/
 
 #if (PLL0_SETUP)
-	LPC_SC->PLL0CFG   = PLL0CFG_Val;
-	LPC_SC->PLL0CON   = 0x01;             /* PLL0 Enable                        */
-	LPC_SC->PLL0FEED  = 0xAA;
-	LPC_SC->PLL0FEED  = 0x55;
-	while (!(LPC_SC->PLL0STAT & (1<<10)));/* Wait for PLOCK0                    */
+  LPC_SC->PLL0CFG   = PLL0CFG_Val;
+  LPC_SC->PLL0CON   = 0x01;             /* PLL0 Enable                        */
+  LPC_SC->PLL0FEED  = 0xAA;
+  LPC_SC->PLL0FEED  = 0x55;
+  while (!(LPC_SC->PLL0STAT & (1<<10)));/* Wait for PLOCK0                    */
 #endif
 
 #if (PLL1_SETUP)
-	LPC_SC->PLL1CFG   = PLL1CFG_Val;
-	LPC_SC->PLL1CON   = 0x01;             /* PLL1 Enable                        */
-	LPC_SC->PLL1FEED  = 0xAA;
-	LPC_SC->PLL1FEED  = 0x55;
-	while (!(LPC_SC->PLL1STAT & (1<<10)));/* Wait for PLOCK1                    */
+  LPC_SC->PLL1CFG   = PLL1CFG_Val;
+  LPC_SC->PLL1CON   = 0x01;             /* PLL1 Enable                        */
+  LPC_SC->PLL1FEED  = 0xAA;
+  LPC_SC->PLL1FEED  = 0x55;
+  while (!(LPC_SC->PLL1STAT & (1<<10)));/* Wait for PLOCK1                    */
 #endif
 
-	LPC_SC->CCLKSEL   = CCLKSEL_Val;      /* Setup Clock Divider                */
-	LPC_SC->USBCLKSEL = USBCLKSEL_Val;    /* Setup USB Clock Divider            */
-	LPC_SC->EMCCLKSEL = EMCCLKSEL_Val;    /* EMC Clock Selection                */
-	LPC_SC->PCLKSEL   = PCLKSEL_Val;      /* Peripheral Clock Selection         */
-	LPC_SC->PCONP     = PCONP_Val;        /* Power Control for Peripherals      */
-	LPC_SC->CLKOUTCFG = CLKOUTCFG_Val;    /* Clock Output Configuration         */
+  LPC_SC->CCLKSEL   = CCLKSEL_Val;      /* Setup Clock Divider                */
+  LPC_SC->USBCLKSEL = USBCLKSEL_Val;    /* Setup USB Clock Divider            */
+  LPC_SC->EMCCLKSEL = EMCCLKSEL_Val;    /* EMC Clock Selection                */
+  LPC_SC->PCLKSEL   = PCLKSEL_Val;      /* Peripheral Clock Selection         */
+  LPC_SC->PCONP     = PCONP_Val;        /* Power Control for Peripherals      */
+  LPC_SC->CLKOUTCFG = CLKOUTCFG_Val;    /* Clock Output Configuration         */
 #endif
 
 #if (FLASH_SETUP == 1)                  /* Flash Accelerator Setup            */
-	LPC_SC->FLASHCFG  = FLASHCFG_Val|0x03A;
+  LPC_SC->FLASHCFG  = FLASHCFG_Val|0x03A;
 #endif
 #ifdef  __RAM_MODE__
-	//SCB->VTOR  = 0x10000000 & 0x3FFFFF80;
-	SCB->VTOR  = 0x10000000 | VECT_TAB_OFFSET;
-
+  SCB->VTOR  = 0x10000000 & 0x3FFFFF80;
 #else
-	//SCB->VTOR  = 0x00000000 & 0x3FFFFF80;
-	SCB->VTOR  = 0x00000000 | VECT_TAB_OFFSET;
+  SCB->VTOR  = 0x00000000 & 0x3FFFFF80;
 #endif
 }

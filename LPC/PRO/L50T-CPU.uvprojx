@@ -414,6 +414,21 @@
               <FileType>1</FileType>
               <FilePath>..\BSP\bsp_pcf8563.c</FilePath>
             </File>
+            <File>
+              <FileName>bsp_rs485.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\bsp_rs485.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_rs232.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\bsp_rs232.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_led.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\bsp_led.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -458,6 +473,16 @@
               <FileName>LPC1700CAN.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Driver\LPC1700CAN.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>dma.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Driver\dma.c</FilePath>
             </File>
           </Files>
         </Group>

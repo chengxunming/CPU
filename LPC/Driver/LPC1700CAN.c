@@ -297,7 +297,7 @@ Status Send_CAN_DataFrame(uint8_t ch,uint8_t addr,uint8_t *ptr,uint8_t len) //pt
 	CAN_MSG_Type TxMessage;
 
 	
-	SENDID = (0x01<<7)|addr;
+	SENDID = addr;
 	
 	TxMessage.format = STD_ID_FORMAT;
 	TxMessage.id = SENDID;
@@ -428,7 +428,19 @@ Status CAN_SendMsg (uint8_t canId, CAN_MSG_Type *CAN_Msg)
 {
 	LPC_CAN_TypeDef* pCan = CAN_GetPointer(canId);
 
-	uint32_t data;
+	uint32_t data,CAN32reg,regaddr;
+	
+	CAN32reg = 0;
+    while (!(CAN32reg & (1 << 3))) 
+	{
+        regaddr = (unsigned long)(&pCan->GSR);         /* 等待上一次发送完成           */
+        CAN32reg = RGE(regaddr);
+		if(!(CAN32reg & (1 << 3))) 
+		{                          							
+            delay_ms(1);                                
+            CAN32reg=(1<<3);                               	
+		}
+    }
 
 	//Check status of Transmit Buffer 1
 	if (pCan->SR & (1 << 2))
@@ -673,6 +685,137 @@ void CAN_IRQHandler (void)
         
     }
         
+}
+
+
+/*----------------------------------------------------------------------------
+  setup acceptance filter.  CAN controller (0..1)
+ *----------------------------------------------------------------------------*/
+void CAN_wrFilter (uint32_t ctrl, uint32_t id, uint8_t format)  
+{
+  static int CAN_std_cnt = 0;
+  static int CAN_ext_cnt = 0;
+         uint32_t buf0, buf1;
+         int cnt1, cnt2, bound1;
+
+  /* Acceptance Filter Memory full */
+  if ((((CAN_std_cnt + 1) >> 1) + CAN_ext_cnt) >= 512)
+    return;                                       /* error: objects full */
+
+  /* Setup Acceptance Filter Configuration 
+    Acceptance Filter Mode Register = Off  */                                 
+  LPC_CANAF->AFMR = 0x00000001;
+
+  if (format == STANDARD_FORMAT)  {              /* Add mask for standard identifiers */
+    id |= (ctrl) << 13;                        /* Add controller number */
+    id &= 0x0000F7FF;                            /* Mask out 16-bits of ID */
+
+    /* Move all remaining extended mask entries one place up                 
+       if new entry will increase standard ID filters list   */
+    if ((CAN_std_cnt & 0x0001) == 0 && CAN_ext_cnt != 0) {
+      cnt1   = (CAN_std_cnt >> 1);
+      bound1 = CAN_ext_cnt;
+      buf0   = LPC_CANAF_RAM->mask[cnt1];
+      while (bound1--)  {
+        cnt1++;
+        buf1 = LPC_CANAF_RAM->mask[cnt1];
+        LPC_CANAF_RAM->mask[cnt1] = buf0;
+        buf0 = buf1;
+      }        
+    }
+
+    if (CAN_std_cnt == 0)  {                     /* For entering first  ID */
+      LPC_CANAF_RAM->mask[0] = 0x0000FFFF | (id << 16);
+    }  else if (CAN_std_cnt == 1)  {             /* For entering second ID */
+      if ((LPC_CANAF_RAM->mask[0] >> 16) > id)
+        LPC_CANAF_RAM->mask[0] = (LPC_CANAF_RAM->mask[0] >> 16) | (id << 16);
+      else
+        LPC_CANAF_RAM->mask[0] = (LPC_CANAF_RAM->mask[0] & 0xFFFF0000) | id;
+    }  else  {
+      /* Find where to insert new ID */
+      cnt1 = 0;
+      cnt2 = CAN_std_cnt;
+      bound1 = (CAN_std_cnt - 1) >> 1;
+      while (cnt1 <= bound1)  {                  /* Loop through standard existing IDs */
+        if ((LPC_CANAF_RAM->mask[cnt1] >> 16) > id)  {
+          cnt2 = cnt1 * 2;
+          break;
+        }
+        if ((LPC_CANAF_RAM->mask[cnt1] & 0x0000FFFF) > id)  {
+          cnt2 = cnt1 * 2 + 1;
+          break;
+        }
+        cnt1++;                                  /* cnt1 = U32 where to insert new ID */
+      }                                          /* cnt2 = U16 where to insert new ID */
+
+      if (cnt1 > bound1)  {                      /* Adding ID as last entry */
+        if ((CAN_std_cnt & 0x0001) == 0)         /* Even number of IDs exists */
+          LPC_CANAF_RAM->mask[cnt1]  = 0x0000FFFF | (id << 16);
+        else                                     /* Odd  number of IDs exists */
+          LPC_CANAF_RAM->mask[cnt1]  = (LPC_CANAF_RAM->mask[cnt1] & 0xFFFF0000) | id;
+      }  else  {
+        buf0 = LPC_CANAF_RAM->mask[cnt1];        /* Remember current entry */
+        if ((cnt2 & 0x0001) == 0)                /* Insert new mask to even address */
+          buf1 = (id << 16) | (buf0 >> 16);
+        else                                     /* Insert new mask to odd  address */
+          buf1 = (buf0 & 0xFFFF0000) | id;
+     
+        LPC_CANAF_RAM->mask[cnt1] = buf1;        /* Insert mask */
+
+        bound1 = CAN_std_cnt >> 1;
+        /* Move all remaining standard mask entries one place up */
+        while (cnt1 < bound1)  {
+          cnt1++;
+          buf1  = LPC_CANAF_RAM->mask[cnt1];
+          LPC_CANAF_RAM->mask[cnt1] = (buf1 >> 16) | (buf0 << 16);
+          buf0  = buf1;
+        }
+
+        if ((CAN_std_cnt & 0x0001) == 0)         /* Even number of IDs exists */
+          LPC_CANAF_RAM->mask[cnt1] = (LPC_CANAF_RAM->mask[cnt1] & 0xFFFF0000) | (0x0000FFFF);
+      }
+    }
+    CAN_std_cnt++;
+  }  else  {                                     /* Add mask for extended identifiers */
+    id |= (ctrl) << 29;                        /* Add controller number */
+
+    cnt1 = ((CAN_std_cnt + 1) >> 1);
+    cnt2 = 0;
+    while (cnt2 < CAN_ext_cnt)  {                /* Loop through extended existing masks */
+      if (LPC_CANAF_RAM->mask[cnt1] > id)
+        break;
+      cnt1++;                                    /* cnt1 = U32 where to insert new mask */
+      cnt2++;
+    }
+
+    buf0 = LPC_CANAF_RAM->mask[cnt1];            /* Remember current entry */
+    LPC_CANAF_RAM->mask[cnt1] = id;              /* Insert mask */
+
+    CAN_ext_cnt++;
+
+    bound1 = CAN_ext_cnt - 1;
+    /* Move all remaining extended mask entries one place up */
+    while (cnt2 < bound1)  {
+      cnt1++;
+      cnt2++;
+      buf1 = LPC_CANAF_RAM->mask[cnt1];
+      LPC_CANAF_RAM->mask[cnt1] = buf0;
+      buf0 = buf1;
+    }        
+  }
+  
+  /* Calculate std ID start address (buf0) and ext ID start address (buf1) */
+  buf0 = ((CAN_std_cnt + 1) >> 1) << 2;
+  buf1 = buf0 + (CAN_ext_cnt << 2);
+
+  /* Setup acceptance filter pointers */
+  LPC_CANAF->SFF_sa     = 0;
+  LPC_CANAF->SFF_GRP_sa = buf0;
+  LPC_CANAF->EFF_sa     = buf0;
+  LPC_CANAF->EFF_GRP_sa = buf1;
+  LPC_CANAF->ENDofTable = buf1;
+
+  LPC_CANAF->AFMR = 0x00000000;                  /* Use acceptance filter */
 }
 
 /*********************************************************************************************************

@@ -6,9 +6,12 @@
 bool Flag_PCF8563_OK=false;
 CAN_EV_TYPE ev_CanRespone=CAN_EV_None;
 NET_EV_TYPE ev_NetRespone=NET_EV_None;
+RS232_EV_TYPE ev_RS232Respone=RS232_EV_None;
 
 uint8_t Time_CanRespone_Count=0;
-uint8_t Time_NetRespone_Count=0;
+uint32_t Time_NetRespone_Count=0;
+uint32_t Time_RS232Respone_Count=0;
+
 
 PCF8563_DATE     TimeAndDate;
 Frame_DefType send_Frame,send_Frame2;
@@ -141,28 +144,154 @@ void CPU_CanTest(void)
 	
 	send_Frame.check_sum=DataCheckSum((uint8_t *)(&send_Frame),4);
 		
-	Send_CAN_DataFrame(CAN_ID_1,send_Frame.module_id,(uint8_t *)(&send_Frame),(uint8_t)sizeof(send_Frame));//发送一帧
+	Send_CAN_DataFrame(CPU_CAN_ID,send_Frame.module_id,(uint8_t *)(&send_Frame),(uint8_t)sizeof(send_Frame));//发送一帧
 	
 }
 
-//网络测试socket创建，主函数调用
-void NET_UDP_SocketConfig(void)
-{
-	W5500_Config();
-	W5500_UDP_SocketCreat(SOCK_UDP_FD,SOCK_UDP_PORT);
-}
-//网络回环测试，主函数调用
-void NET_UDP_LoopBack(void)
-{
-	W5500_UDP_LoopBack(SOCK_UDP_FD,SOCK_UDP_PORT);
-}
+
 //CPU板网络测试
 void CPU_NetTest(void)
 {
+	uint8_t test_num=0;
+	int32_t state=-2;
+	while(1)
+	{
+		test_num++;
+		
+		send_Frame.module_id=CPU_CAN_ID;
+		send_Frame.fun_code=FUN_TX;
+		send_Frame.dataH=CIRCUIT_W5500;
+		send_Frame.dataL=0xff;
+		
+		send_Frame.check_sum=DataCheckSum((uint8_t *)(&send_Frame),4);
+		
+		W5500_UDP_Send(SOCK_UDP_FD,(uint8_t *)(&send_Frame),(uint8_t)sizeof(send_Frame));
+		state=W5500_UDP_Rev(SOCK_UDP_FD,200);
+		if(state==1)
+		{
+			break;
+		}
+		
+		if(test_num>=3)
+		{
+			state=-1;
+			break;
+		}
+	}
+	if(state==1)
+	{
+		if( (gDATALEN==5) && (DataCheckSum(gDATABUF,4)==gDATABUF[4]) )
+		{
+			
+			if( (gDATABUF[0]==CPU_CAN_ID) && (gDATABUF[1]==FUN_TX) && (gDATABUF[2]==CIRCUIT_W5500) && (gDATABUF[3]==0xff) )
+			{
+				state=1;
+			}
+			else 
+			{
+				state=2;
+			}
+		}
+		else
+		{
+			state=2;
+		}
+	}
+	else
+	{
+		state=2;
+	}
+	
+	send_Frame.module_id=CPU_CAN_ID;
+	send_Frame.fun_code=FUN_RESULT;
+	send_Frame.dataH=CIRCUIT_W5500;
+	send_Frame.dataL=(uint8_t)state;
+	
+	send_Frame.check_sum=DataCheckSum((uint8_t *)(&send_Frame),4);
+		
+	Send_CAN_DataFrame(CPU_CAN_ID,send_Frame.module_id,(uint8_t *)(&send_Frame),(uint8_t)sizeof(send_Frame));//发送一帧	
 	
 }
+//CPU板RS232测试
+void CPU_RS232Test(void)
+{
+	uint8_t test_num=0;
+	
+	while(1)
+	{
+		test_num++; //can测试次数累加
+		
+		send_Frame.module_id=CPU_CAN_ID;
+		send_Frame.fun_code=FUN_TX;
+		send_Frame.dataH=0;
+		send_Frame.dataL=0xff;
+		
+		send_Frame.check_sum=DataCheckSum((uint8_t *)(&send_Frame),4);
+		
+		RS485_Send(0,(uint8_t *)(&send_Frame),(uint32_t)sizeof(send_Frame));//发送一帧
+		
+		Time_RS232Respone_Count=0;
+		ev_RS232Respone=RS232_EV_ResReady;
+		while(ev_RS232Respone==RS232_EV_ResReady)
+		{
+			RS232_1_Respone_SendCheck();
+		}
+		if(ev_RS232Respone!=RS232_EV_ResTimeOut)
+		{
+			break;
+		}
+		
+		if(test_num>=3)
+		{
+			break;
+		}
+	}
+	send_Frame.module_id=CPU_CAN_ID;
+	send_Frame.fun_code=FUN_RESULT;
+	send_Frame.dataH=CIRCUIT_RS232;
+	if( ev_RS232Respone==RS232_EV_ResOk )send_Frame.dataL=0x01;
+	else send_Frame.dataL=0x02;
+	
+	send_Frame.check_sum=DataCheckSum((uint8_t *)(&send_Frame),4);
+		
+	Send_CAN_DataFrame(CPU_CAN_ID,send_Frame.module_id,(uint8_t *)(&send_Frame),(uint8_t)sizeof(send_Frame));//发送一帧
+}
+//CPU板RS485测试
+void CPU_RS485Test(void)
+{
+	uint8_t test_num=0;
+	uint8_t state;
+	while(1)
+	{
+		test_num++;
+		
+		RS485_SendTest();
+		
+		state=RS485_RevResult();
+		
+		if(state==1)
+		{
+			break;
+		}
+		
+		if(test_num>=3)
+		{
+			break;
+		}
+		delay_ms(200);
+	}
+	
+	send_Frame.module_id=CPU_CAN_ID;
+	send_Frame.fun_code=FUN_RESULT;
+	send_Frame.dataH=CIRCUIT_RS485;
+	send_Frame.dataL=state;
+	
+	send_Frame.check_sum=DataCheckSum((uint8_t *)(&send_Frame),4);
+		
+	Send_CAN_DataFrame(CPU_CAN_ID,send_Frame.module_id,(uint8_t *)(&send_Frame),(uint8_t)sizeof(send_Frame));//发送一帧
+}
 //RTC时钟电路测试
-void CPU_PCF8563_Test(void)
+void CPU_PCF8563Test(void)
 {
 	uint8_t state_PCF8563_test=1;
 	PCF8563_DATE timeRead;
@@ -200,6 +329,7 @@ void CPU_PCF8563_Test(void)
 	{
 		state_PCF8563_test=2;
 	}
+	
 	if(PCF8563_INT_Count<125)
 	{
 		state_PCF8563_test=2;
@@ -216,6 +346,18 @@ void CPU_PCF8563_Test(void)
 	Send_CAN_DataFrame(CAN_ID_1,send_Frame.module_id,(uint8_t *)(&send_Frame),(uint8_t)sizeof(send_Frame));//发送一帧		
 }
 
+//发送测试结束帧
+void CPU_TestEnd(void)
+{
+	send_Frame.module_id=CPU_CAN_ID;
+	send_Frame.fun_code=FUN_END;
+	send_Frame.dataH=0xff;
+	send_Frame.dataL=0xff;
+	send_Frame.check_sum=DataCheckSum((uint8_t *)(&send_Frame),4);
+		
+	Send_CAN_DataFrame(CAN_ID_1,send_Frame.module_id,(uint8_t *)(&send_Frame),(uint8_t)sizeof(send_Frame));//发送一帧
+}
+
 //计算和校验
 uint8_t DataCheckSum(uint8_t *data,uint8_t len)
 {
@@ -227,4 +369,23 @@ uint8_t DataCheckSum(uint8_t *data,uint8_t len)
 	}
 	sum=0xff-sum;
 	return sum;
+}
+
+//网络测试socket创建，主函数调用
+void NET_UDP_SocketConfig(void)
+{
+	W5500_Config();
+	W5500_UDP_SocketCreat(SOCK_UDP_FD,SOCK_UDP_PORT);
+}
+
+void CAN_Config(void)
+{
+	CAN_Init(CAN_ID_1,BPS_500K);
+	CAN_wrFilter(CAN_ID_1,CPU_CAN_ID,STANDARD_FORMAT);
+	CAN_wrFilter(CAN_ID_1,TEST_CAN2_ID,STANDARD_FORMAT);
+	
+	CAN_Init(CAN_ID_2,BPS_500K);
+	CAN_wrFilter(CAN_ID_2,TEST_CAN1_ID,STANDARD_FORMAT);
+	
+	NVIC_EnableIRQ(CAN_IRQn);
 }

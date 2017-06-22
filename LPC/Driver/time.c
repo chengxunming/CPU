@@ -41,7 +41,7 @@ void timer1Init (void)
     
     NVIC_EnableIRQ(TIMER1_IRQn);                                        /* 设置中断并使能               */
     NVIC_SetPriority(TIMER1_IRQn, 0);
-    LPC_TIM1->TCR  = 0x00;                                              /* 启动定时器                   */
+    LPC_TIM1->TCR  = 0x01;                                              /* 启动定时器                   */
 }
 
 
@@ -78,6 +78,8 @@ void TIMER0_IRQHandler (void)
 {
 	LPC_TIM0->IR         = 0x01;                                        /* 清除中断标志                 */
 	
+	Time_NetRespone_Count++;
+
 	//CAN通信测试 200ms超时
 	if(ev_CanRespone==CAN_EV_ResReady)
 	{
@@ -86,6 +88,17 @@ void TIMER0_IRQHandler (void)
 		{
 			Time_CanRespone_Count=0;
 			ev_CanRespone=CAN_EV_ResTimeOut;
+		}
+	}
+	
+	//RS232通信测试 200ms超时
+	if(ev_RS232Respone==RS232_EV_ResReady)
+	{
+		Time_RS232Respone_Count++;
+		if(Time_RS232Respone_Count>=200)
+		{
+			Time_RS232Respone_Count=0;
+			ev_RS232Respone=RS232_EV_ResTimeOut;
 		}
 	}
 	
@@ -99,8 +112,10 @@ void TIMER0_IRQHandler (void)
 void TIMER1_IRQHandler (void)
 {
 	LPC_TIM1->IR         = 0x01;                                        /* 清除中断标志                 */
+	
 	Flag_PCF8563_OK=true;
 	NVIC_DisableIRQ(TIMER1_IRQn);
+	
 }
 /*********************************************************************************************************
 ** 函数名称：TIMER2_IRQHandler

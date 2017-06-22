@@ -4,17 +4,19 @@
 #include "bsp_include.h"
 
 /* Private define ------------------------------------------------------------*/
-#define DATA_BUF_SIZE    10
+#define DATA_BUF_SIZE    15
 
 uint8_t memsize[2][8] = {{2,2,2,2,2,2,2,2},{2,2,2,2,2,2,2,2}};	
-
-uint8_t gDATABUF[DATA_BUF_SIZE];	
+	
 wiz_NetInfo gWIZNETINFO = { .mac = {0x00, 0x08, 0xdc,0x00, 0xab, 0xcd},
                             .ip = {192, 168, 1, 123},
                             .sn = {255,255,255,0},
                             .gw = {192, 168, 1, 1},
                             .dns = {0,0,0,0},
                             .dhcp = NETINFO_STATIC };
+
+uint8_t gDATABUF[15];
+uint8_t gDATALEN;							
 ////////////////////////////////////////////////LINK  W5500/////////////////////////////////////////////////////////////////////
 
 //W5500复位引脚和片选引脚初始化 
@@ -137,8 +139,8 @@ void W5500_UDP_SocketCreat(uint8_t sn, uint16_t port)
 int32_t W5500_UDP_Send(uint8_t sn,uint8_t* data,uint8_t len)
 {
 	int32_t  ret;
-	uint8_t  destip[4];
-	uint16_t destport;
+	uint8_t  destip[4]={192,168,30,207};
+	uint16_t destport=49488;
 	
 	if(getSn_SR(sn)==SOCK_UDP)
 	{
@@ -156,9 +158,48 @@ int32_t W5500_UDP_Send(uint8_t sn,uint8_t* data,uint8_t len)
 	return 1;
 }
 //UD接收数据
-int32_t W5500_UDP_Rev(uint8_t sn,uint8_t* data,uint8_t len)
+int32_t W5500_UDP_Rev(uint8_t sn,uint32_t timeout)
 {
+	int32_t  ret,state;
+	uint16_t size;
+	uint8_t  destip[4];
+	uint16_t destport;
+	uint32_t timestop;
 	
+	memset(gDATABUF,0,gDATALEN);
+	gDATALEN=0;
+	
+	timestop=Time_NetRespone_Count+timeout;
+	while(1)
+	{
+		if((size = getSn_RX_RSR(sn)) > 0)
+		{
+			if(size > DATA_BUF_SIZE)size = DATA_BUF_SIZE;
+			ret = recvfrom(sn, gDATABUF, size, destip, (uint16_t*)&destport);
+			if(ret <= 0)
+			{
+				state = -1;
+			}
+			else
+			{
+				gDATALEN=ret;
+				state = 1;
+			}
+			break;
+		}
+		
+		if(timeout==0)
+		{	
+			state = -2;
+			break;
+		}
+		if(Time_NetRespone_Count>=timestop)
+		{
+			state = -2;
+			break;
+		}
+	}
+	return state;
 }
 
 //UDP连接数据回环测试
@@ -178,7 +219,7 @@ int32_t W5500_UDP_LoopBack(uint8_t sn, uint16_t port)
 				if(size > DATA_BUF_SIZE)size = DATA_BUF_SIZE;
 				buf=(uint8_t*)malloc(size);//分配内存，存放接收数据
 				if(buf==NULL) return -1;
-				ret = recvfrom(sn, buf, size, destip, (uint16_t*)&destport);
+				ret = recvfrom(sn, gDATABUF, size, destip, (uint16_t*)&destport);
 				if(ret <= 0)
 				{
 					return ret;

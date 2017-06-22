@@ -18,3 +18,8 @@
 .\objects\time.o: ..\BSP\bsp_net.h
 .\objects\time.o: ..\Driver\ssp.h
 .\objects\time.o: ..\BSP\bsp_pcf8563.h
+.\objects\time.o: ..\BSP\bsp_rs485.h
+.\objects\time.o: ..\Driver\uart.h
+.\objects\time.o: ..\BSP\bsp_rs232.h
+.\objects\time.o: ..\USER\bsp_include.h
+.\objects\time.o: ..\BSP\bsp_led.h

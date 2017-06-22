@@ -26,6 +26,13 @@
 #ifndef __DMA_H 
 #define __DMA_H
 
+#include "lpc177x_8x.h"
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
 /* 
  * Second half of the second RAM is used for GPDMA operation
  */
